@@ -13,11 +13,11 @@ import android.net.VpnService
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
-import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import dev.vulpes.tunnel.FoxyVpnApp
 import dev.vulpes.tunnel.MainActivity
+import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.AppLogger
 import dev.vulpes.tunnel.data.ControlPlaneHttp
 import dev.vulpes.tunnel.data.FxaAuthRepository
@@ -163,7 +163,6 @@ class FoxyVpnService : VpnService() {
 
     private var tokenRenewalJob: Job? = null
 
-    private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
 
     @Volatile private var tunnelInterfaceActive = false
@@ -174,7 +173,7 @@ class FoxyVpnService : VpnService() {
 
     @Volatile private var lastUnhealthyRedialAt = 0L
 
-    @Volatile private var statusLabel: String = "Connecting\u2026"
+    @Volatile private var statusLabel: String = ""
 
     @Volatile private var foregroundActive = false
 
@@ -332,6 +331,8 @@ class FoxyVpnService : VpnService() {
         val action = intent?.action ?: ACTION_CONNECT
         if (action == ACTION_CONNECT || action == VpnService.SERVICE_INTERFACE) {
 
+            if (statusLabel.isEmpty()) statusLabel = getString(R.string.notif_connecting)
+
             if (_state.value != ConnectionState.DISCONNECTED) {
                 AppLogger.d(TAG, "ignoring duplicate connect request while ${_state.value}")
 
@@ -343,7 +344,7 @@ class FoxyVpnService : VpnService() {
             }
             _state.value = ConnectionState.CONNECTING
             _lastError.value = null
-            statusLabel = "Connecting\u2026"
+            statusLabel = getString(R.string.notif_connecting)
             enterForeground(statusLabel)
 
             acquireWakeLocks()
@@ -584,10 +585,10 @@ class FoxyVpnService : VpnService() {
 
             fun connectedLabel(): String = if (proxyOnlyMode) {
 
-                "Proxy active \u2022 $socksBindAddress:$socksPort"
+                getString(R.string.notif_proxy_active, "$socksBindAddress:$socksPort")
             } else {
                 val target = activeCandidate()
-                "Connected \u2022 ${target.countryName.ifBlank { target.countryCode }}"
+                getString(R.string.notif_connected, target.countryName.ifBlank { target.countryCode })
             }
 
             if (proxyOnlyMode) {
@@ -618,7 +619,8 @@ class FoxyVpnService : VpnService() {
                         "local proxy at $socksBindAddress:$socksPort",
                 )
             } else {
-                val fd = establishTun(excludedApps, customDnsServer) ?: error("Failed to establish TUN interface")
+                val fd = establishTun(excludedApps, customDnsServer, settingsStore.killSwitchEnabled)
+                    ?: error("Failed to establish TUN interface")
                 tunFd = fd
                 tunnelInterfaceActive = true
 
@@ -841,6 +843,17 @@ class FoxyVpnService : VpnService() {
 
                 suspend fun stopWithFatalError(message: String) {
                     AppLogger.e(TAG, "unrecoverable upstream failure; disconnecting: $message")
+                    if (settingsStore.killSwitchEnabled) {
+                        // Kill switch engaged: leave the TUN interface in place with no upstream,
+                        // so traffic is dropped rather than sent over the real connection.
+                        val blocked = applicationContext.getString(R.string.killswitch_blocked)
+                        AppLogger.w(TAG, "kill switch is on; keeping the tunnel up and blocking traffic")
+                        _lastError.value = blocked
+                        _state.value = ConnectionState.DISCONNECTED
+                        statusLabel = blocked
+                        updateNotification(blocked)
+                        return
+                    }
                     _lastError.value = message
                     connectionGeneration++
                     watchdogJob = null
@@ -871,7 +884,7 @@ class FoxyVpnService : VpnService() {
                         if (!waitingForNetwork) {
                             AppLogger.i(TAG, "no usable network; holding the session and waiting for connectivity")
                             waitingForNetwork = true
-                            statusLabel = "Waiting for network\u2026"
+                            statusLabel = getString(R.string.notif_waiting_network)
                             updateNotification(statusLabel)
                         }
                         consecutiveFailures = 0
@@ -884,7 +897,7 @@ class FoxyVpnService : VpnService() {
 
                     AppLogger.w(TAG, "upstream tunnel is down; attempting to reconnect")
                     runCatching { current?.close() }
-                    statusLabel = "Reconnecting\u2026"
+                    statusLabel = getString(R.string.notif_reconnecting)
                     updateNotification(statusLabel)
 
                     val dialResult = try {
@@ -1016,13 +1029,18 @@ class FoxyVpnService : VpnService() {
     }
 
     private fun friendlyErrorMessage(error: Throwable): String = when (error) {
-        is QuotaExceededError -> "Your VPN quota is exhausted. Try again later."
-        is TokenInvalidError -> "Your session was rejected. Please sign in again."
-        is TimeoutCancellationException -> "the connection timed out"
-        else -> error.message ?: (error::class.simpleName ?: "Connection failed")
+        is QuotaExceededError -> applicationContext.getString(R.string.err_quota)
+        is TokenInvalidError -> applicationContext.getString(R.string.err_session_expired)
+        is TimeoutCancellationException, is java.io.IOException ->
+            applicationContext.getString(R.string.err_network)
+        else -> applicationContext.getString(R.string.err_generic)
     }
 
-    private fun establishTun(excludedApps: Set<String>, customDnsServer: String?): ParcelFileDescriptor? {
+    private fun establishTun(
+        excludedApps: Set<String>,
+        customDnsServer: String?,
+        killSwitch: Boolean,
+    ): ParcelFileDescriptor? {
         val dnsServer = customDnsServer ?: HevSocks5TunnelConfig.MAPDNS_ADDRESS
         if (customDnsServer != null) {
             AppLogger.i(TAG, "establishTun: dns=$customDnsServer (user-selected, resolved over the tunnel)")
@@ -1059,7 +1077,8 @@ class FoxyVpnService : VpnService() {
                 }
             }
             .addDnsServer(dnsServer)
-
+            // Without a kill switch Android lets apps route around the VPN entirely.
+            .setAllowBypass(!killSwitch)
             .setMtu(HevSocks5TunnelConfig.TUN_MTU)
             .setBlocking(true)
             .apply {

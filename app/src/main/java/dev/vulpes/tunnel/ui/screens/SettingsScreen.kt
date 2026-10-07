@@ -1,5 +1,8 @@
 package dev.vulpes.tunnel.ui.screens
 
+import android.content.Context
+import android.provider.Settings
+import android.os.PowerManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -48,10 +51,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import dev.vulpes.tunnel.BuildConfig
+import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.SettingsStore
 
 private const val GITHUB_URL = "https://github.com/freevpnxx/FoxyVPN"
@@ -65,7 +70,15 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val notSetLabel = stringResource(R.string.value_not_set)
+    val noneLabel = stringResource(R.string.value_none)
+    val dohLabel = dohProvider.labelRes?.let { stringResource(it) } ?: dohProvider.label
     var exitCheckEnabled by remember { mutableStateOf(settingsStore.exitCheckEnabled) }
+    var killSwitchEnabled by remember { mutableStateOf(settingsStore.killSwitchEnabled) }
+    val batteryUnrestricted = remember {
+        (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
+            ?.isIgnoringBatteryOptimizations(context.packageName) == true
+    }
     var dohProvider by remember { mutableStateOf(settingsStore.dohProvider) }
     var customDnsEnabled by remember { mutableStateOf(settingsStore.customDnsEnabled) }
     var customDnsServer by remember { mutableStateOf(settingsStore.customDnsServer) }
@@ -199,10 +212,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -214,10 +227,10 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            SectionLabel("Connection")
+            SectionLabel(stringResource(R.string.settings_section_connection))
             ListItem(
-                headlineContent = { Text("Verify exit location") },
-                supportingContent = { Text("Check that the tunnel exits in the selected country") },
+                headlineContent = { Text(stringResource(R.string.settings_verify_exit)) },
+                supportingContent = { Text(stringResource(R.string.settings_verify_exit_desc)) },
                 trailingContent = {
                     Switch(
                         checked = exitCheckEnabled,
@@ -228,18 +241,61 @@ fun SettingsScreen(
                     )
                 },
             )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.killswitch_title)) },
+                supportingContent = { Text(stringResource(R.string.killswitch_subtitle)) },
+                trailingContent = {
+                    Switch(
+                        checked = killSwitchEnabled,
+                        onCheckedChange = {
+                            killSwitchEnabled = it
+                            settingsStore.killSwitchEnabled = it
+                        },
+                    )
+                },
+            )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionLabel("DNS")
+            SectionLabel(stringResource(R.string.settings_section_reliability))
             ListItem(
-                headlineContent = { Text("Encrypted DNS") },
-                supportingContent = { Text(dohProvider.label) },
+                headlineContent = { Text(stringResource(R.string.settings_always_on)) },
+                supportingContent = { Text(stringResource(R.string.settings_always_on_desc)) },
+                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    runCatching {
+                        context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+                    }
+                },
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_battery)) },
+                supportingContent = {
+                    Text(
+                        if (batteryUnrestricted) stringResource(R.string.settings_battery_ok)
+                        else stringResource(R.string.settings_battery_desc),
+                    )
+                },
+                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+                        )
+                    }
+                },
+            )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SectionLabel(stringResource(R.string.settings_section_dns))
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_encrypted_dns)) },
+                supportingContent = { Text(dohLabel) },
                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                 modifier = Modifier.clickable { showDohProviderDialog = true },
             )
             ListItem(
-                headlineContent = { Text("Use a custom DNS server") },
-                supportingContent = { Text("Send your apps' DNS queries to a server you choose") },
+                headlineContent = { Text(stringResource(R.string.settings_custom_dns)) },
+                supportingContent = { Text(stringResource(R.string.settings_custom_dns_desc)) },
                 trailingContent = {
                     Switch(
                         checked = customDnsEnabled,
@@ -252,7 +308,7 @@ fun SettingsScreen(
             )
             if (customDnsEnabled) {
                 ListItem(
-                    headlineContent = { Text("DNS server") },
+                    headlineContent = { Text(stringResource(R.string.settings_dns_server)) },
                     supportingContent = {
                         val presetLabel = SettingsStore.CUSTOM_DNS_PRESETS
                             .firstOrNull { it.first == customDnsServer }
@@ -265,10 +321,10 @@ fun SettingsScreen(
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionLabel("Local proxy")
+            SectionLabel(stringResource(R.string.settings_section_local_proxy))
             ListItem(
-                headlineContent = { Text("Proxy-only mode") },
-                supportingContent = { Text("Run only the local SOCKS5 proxy, without a VPN interface") },
+                headlineContent = { Text(stringResource(R.string.settings_proxy_only)) },
+                supportingContent = { Text(stringResource(R.string.settings_proxy_only_desc)) },
                 trailingContent = {
                     Switch(
                         checked = proxyOnlyMode,
@@ -280,28 +336,28 @@ fun SettingsScreen(
                 },
             )
             ListItem(
-                headlineContent = { Text("Local address") },
+                headlineContent = { Text(stringResource(R.string.settings_local_address)) },
                 supportingContent = { Text(socksBindAddress) },
                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                 modifier = Modifier.clickable { showSocksBindDialog = true },
             )
             ListItem(
-                headlineContent = { Text("Local port") },
+                headlineContent = { Text(stringResource(R.string.settings_local_port)) },
                 supportingContent = { Text(socksPort.toString()) },
                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                 modifier = Modifier.clickable { showSocksPortDialog = true },
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionLabel("Split tunneling")
+            SectionLabel(stringResource(R.string.settings_section_split))
             ListItem(
-                headlineContent = { Text("Excluded apps") },
+                headlineContent = { Text(stringResource(R.string.settings_excluded_apps)) },
                 supportingContent = {
                     Text(
                         if (excludedApps.isEmpty()) {
-                            "None"
+                            stringResource(R.string.value_none)
                         } else {
-                            "${excludedApps.size} app(s) bypass the VPN"
+                            stringResource(R.string.settings_excluded_count, excludedApps.size)
                         },
                     )
                 },
@@ -310,16 +366,16 @@ fun SettingsScreen(
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionLabel("Advanced")
+            SectionLabel(stringResource(R.string.settings_section_advanced))
             ListItem(
-                headlineContent = { Text("Custom edge address") },
-                supportingContent = { Text(customEdgeAddress.ifBlank { "Not set" }) },
+                headlineContent = { Text(stringResource(R.string.settings_custom_edge)) },
+                supportingContent = { Text(customEdgeAddress.ifBlank { notSetLabel }) },
                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                 modifier = Modifier.clickable { showEdgeAddressDialog = true },
             )
             ListItem(
-                headlineContent = { Text("Chain through upstream proxy") },
-                supportingContent = { Text("Connect to the VPN server through another proxy first") },
+                headlineContent = { Text(stringResource(R.string.settings_upstream)) },
+                supportingContent = { Text(stringResource(R.string.settings_upstream_desc)) },
                 trailingContent = {
                     Switch(
                         checked = upstreamProxyEnabled,
@@ -332,17 +388,17 @@ fun SettingsScreen(
             )
             if (upstreamProxyEnabled) {
                 ListItem(
-                    headlineContent = { Text("Proxy type") },
+                    headlineContent = { Text(stringResource(R.string.settings_proxy_type)) },
                     supportingContent = { Text(upstreamProxyType.name) },
                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                     modifier = Modifier.clickable { showUpstreamProxyTypeDialog = true },
                 )
                 ListItem(
-                    headlineContent = { Text("Proxy address") },
+                    headlineContent = { Text(stringResource(R.string.settings_proxy_address)) },
                     supportingContent = {
                         Text(
                             if (upstreamProxyHost.isBlank()) {
-                                "Not set"
+                                notSetLabel
                             } else {
                                 "$upstreamProxyHost:$upstreamProxyPort"
                             },
@@ -352,9 +408,9 @@ fun SettingsScreen(
                     modifier = Modifier.clickable { showUpstreamProxyAddressDialog = true },
                 )
                 ListItem(
-                    headlineContent = { Text("Proxy credentials") },
+                    headlineContent = { Text(stringResource(R.string.settings_proxy_credentials)) },
                     supportingContent = {
-                        Text(if (upstreamProxyUsername.isBlank()) "None" else upstreamProxyUsername)
+                        Text(upstreamProxyUsername.ifBlank { noneLabel })
                     },
                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                     modifier = Modifier.clickable { showUpstreamProxyCredentialsDialog = true },
@@ -362,19 +418,19 @@ fun SettingsScreen(
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionLabel("About")
+            SectionLabel(stringResource(R.string.settings_section_about))
             ListItem(
-                headlineContent = { Text("View logs") },
-                supportingContent = { Text("Recent connection activity") },
+                headlineContent = { Text(stringResource(R.string.settings_view_logs)) },
+                supportingContent = { Text(stringResource(R.string.settings_view_logs_desc)) },
                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onOpenLogs),
             )
             ListItem(
-                headlineContent = { Text("Version") },
+                headlineContent = { Text(stringResource(R.string.settings_version)) },
                 supportingContent = { Text(BuildConfig.VERSION_NAME) },
             )
             ListItem(
-                headlineContent = { Text("Source code") },
+                headlineContent = { Text(stringResource(R.string.settings_source)) },
                 supportingContent = { Text(GITHUB_URL) },
                 leadingContent = { Icon(Icons.Filled.Code, contentDescription = null) },
                 modifier = Modifier.clickable {
@@ -383,10 +439,10 @@ fun SettingsScreen(
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionLabel("Account")
+            SectionLabel(stringResource(R.string.settings_section_account))
             ListItem(
-                headlineContent = { Text("Manage account") },
-                supportingContent = { Text("Subscription status and data usage") },
+                headlineContent = { Text(stringResource(R.string.settings_manage_account)) },
+                supportingContent = { Text(stringResource(R.string.settings_account_desc)) },
                 leadingContent = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onOpenAccount),
@@ -402,7 +458,7 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-                Text("  Sign out")
+                Text("  " + stringResource(R.string.settings_sign_out))
             }
         }
     }
@@ -418,7 +474,7 @@ private fun DohProviderPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Encrypted DNS") },
+        title = { Text(stringResource(R.string.settings_encrypted_dns)) },
         text = {
             Column {
                 SettingsStore.DohProvider.entries.forEach { provider ->
@@ -433,8 +489,8 @@ private fun DohProviderPickerDialog(
                         Column(Modifier.padding(start = 8.dp)) {
                             Text(provider.label)
                             val detail = when (provider) {
-                                SettingsStore.DohProvider.AUTOMATIC -> "Use whichever answers first"
-                                SettingsStore.DohProvider.OFF -> "Use the network's own DNS"
+                                SettingsStore.DohProvider.AUTOMATIC -> stringResource(R.string.settings_dns_automatic)
+                                SettingsStore.DohProvider.OFF -> stringResource(R.string.settings_dns_off)
                                 else -> provider.addresses.joinToString(", ")
                             }
                             Text(
@@ -448,10 +504,10 @@ private fun DohProviderPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selected) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(selected) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -467,7 +523,7 @@ private fun CustomDnsPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("DNS server") },
+        title = { Text(stringResource(R.string.settings_dns_server)) },
         text = {
             Column {
                 SettingsStore.CUSTOM_DNS_PRESETS.forEach { (address, label) ->
@@ -485,7 +541,7 @@ private fun CustomDnsPickerDialog(
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it.trim() },
-                    label = { Text("IPv4 address") },
+                    label = { Text(stringResource(R.string.settings_edge_host_hint)) },
                     singleLine = true,
                     isError = value.isNotBlank() && !isValid,
                     modifier = Modifier.padding(top = 8.dp),
@@ -493,10 +549,10 @@ private fun CustomDnsPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value) }, enabled = isValid) { Text("Save") }
+            TextButton(onClick = { onConfirm(value) }, enabled = isValid) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -513,18 +569,18 @@ private fun CustomEdgeAddressDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Custom edge address") },
+        title = { Text(stringResource(R.string.settings_custom_edge)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it },
-                    label = { Text("Host or IP") },
+                    label = { Text(stringResource(R.string.settings_edge_host_hint)) },
                     singleLine = true,
                     isError = !isValid,
                 )
                 Text(
-                    "Leave empty to resolve the server hostname normally.",
+                    stringResource(R.string.settings_edge_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
@@ -532,10 +588,10 @@ private fun CustomEdgeAddressDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(trimmed) }, enabled = isValid) { Text("Save") }
+            TextButton(onClick = { onConfirm(trimmed) }, enabled = isValid) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -550,7 +606,7 @@ private fun SocksBindAddressPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Local address") },
+        title = { Text(stringResource(R.string.settings_local_address)) },
         text = {
             Column {
                 SettingsStore.SOCKS_BIND_ADDRESS_PRESETS.forEach { (address, label) ->
@@ -568,10 +624,10 @@ private fun SocksBindAddressPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selected) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(selected) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -588,22 +644,22 @@ private fun SocksPortPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Local port") },
+        title = { Text(stringResource(R.string.settings_local_port)) },
         text = {
             OutlinedTextField(
                 value = portText,
                 onValueChange = { portText = it.filter(Char::isDigit).take(5) },
-                label = { Text("Port (1\u201365535)") },
+                label = { Text(stringResource(R.string.settings_hint_port)) },
                 singleLine = true,
                 isError = portText.isNotBlank() && !isValid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
         },
         confirmButton = {
-            TextButton(onClick = { parsedPort?.let { onConfirm(it) } }, enabled = isValid) { Text("Save") }
+            TextButton(onClick = { parsedPort?.let { onConfirm(it) } }, enabled = isValid) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -617,7 +673,7 @@ private fun UpstreamProxyTypePickerDialog(
     var selected by remember { mutableStateOf(current) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Proxy type") },
+        title = { Text(stringResource(R.string.settings_proxy_type)) },
         text = {
             Column {
                 SettingsStore.UpstreamProxyType.entries.forEach { type ->
@@ -635,10 +691,10 @@ private fun UpstreamProxyTypePickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selected) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(selected) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -657,19 +713,19 @@ private fun UpstreamProxyAddressDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Proxy address") },
+        title = { Text(stringResource(R.string.settings_proxy_address)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = host,
                     onValueChange = { host = it.trim() },
-                    label = { Text("Host or IP") },
+                    label = { Text(stringResource(R.string.settings_edge_host_hint)) },
                     singleLine = true,
                 )
                 OutlinedTextField(
                     value = portText,
                     onValueChange = { portText = it.filter(Char::isDigit).take(5) },
-                    label = { Text("Port (1\u201365535)") },
+                    label = { Text(stringResource(R.string.settings_hint_port)) },
                     singleLine = true,
                     isError = portText.isNotBlank() && (parsedPort == null || parsedPort !in 1..65_535),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -678,10 +734,10 @@ private fun UpstreamProxyAddressDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { parsedPort?.let { onConfirm(host, it) } }, enabled = isValid) { Text("Save") }
+            TextButton(onClick = { parsedPort?.let { onConfirm(host, it) } }, enabled = isValid) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -697,19 +753,19 @@ private fun UpstreamProxyCredentialsDialog(
     var password by remember { mutableStateOf(currentPassword) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Proxy credentials") },
+        title = { Text(stringResource(R.string.settings_proxy_credentials)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Username (optional)") },
+                    label = { Text(stringResource(R.string.settings_hint_username)) },
                     singleLine = true,
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password (optional)") },
+                    label = { Text(stringResource(R.string.settings_hint_password)) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.padding(top = 8.dp),
@@ -717,10 +773,10 @@ private fun UpstreamProxyCredentialsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(username, password) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(username, password) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -761,11 +817,11 @@ private fun SplitTunnelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Split tunneling") },
+        title = { Text(stringResource(R.string.settings_section_split)) },
         text = {
             Column {
                 Text(
-                    "Selected apps bypass the VPN and use your normal connection.",
+                    stringResource(R.string.settings_split_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -773,7 +829,7 @@ private fun SplitTunnelDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text("Search apps") },
+                    label = { Text(stringResource(R.string.settings_search_apps)) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier
@@ -786,7 +842,7 @@ private fun SplitTunnelDialog(
                     )
                 } else if (filteredApps.isEmpty()) {
                     Text(
-                        "No apps match \"$searchQuery\".",
+                        stringResource(R.string.settings_no_apps_match, searchQuery),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 12.dp),
@@ -822,10 +878,10 @@ private fun SplitTunnelDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selected) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(selected) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

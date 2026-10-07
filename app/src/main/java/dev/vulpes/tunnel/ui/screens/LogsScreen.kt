@@ -34,8 +34,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.core.content.FileProvider
+import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.AppLogger
 import dev.vulpes.tunnel.data.LogEntry
 import dev.vulpes.tunnel.data.LogLevel
@@ -47,10 +50,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class LogFilter(val label: String, val levels: Set<LogLevel>) {
-    ALL("All", setOf(LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR)),
-    INFO("Info", setOf(LogLevel.INFO)),
-    PROBLEMS("Problems", setOf(LogLevel.WARN, LogLevel.ERROR)),
+private enum class LogFilter(@StringRes val labelRes: Int, val levels: Set<LogLevel>) {
+    ALL(R.string.logs_filter_all, setOf(LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR)),
+    INFO(R.string.logs_filter_info, setOf(LogLevel.INFO)),
+    PROBLEMS(R.string.logs_filter_problems, setOf(LogLevel.WARN, LogLevel.ERROR)),
 }
 
 private suspend fun writeLogFile(context: Context): File = withContext(Dispatchers.IO) {
@@ -67,6 +70,9 @@ fun LogsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.US) }
+    val emptyLabel = stringResource(R.string.logs_empty)
+    val shareLabel = stringResource(R.string.logs_share)
+    val appName = stringResource(R.string.app_name)
     var filter by remember { mutableStateOf(LogFilter.ALL) }
 
     val countsByFilter: Map<LogFilter, Int> = remember(entries) {
@@ -81,19 +87,22 @@ fun LogsScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Text(
-                        if (visible.size == entries.size) "Logs (${entries.size})"
-                        else "Logs (${visible.size}/${entries.size})",
+                        if (visible.size == entries.size) {
+                            "${stringResource(R.string.logs_title)} (${entries.size})"
+                        } else {
+                            "${stringResource(R.string.logs_title)} (${visible.size}/${entries.size})"
+                        },
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = {
                         if (entries.isEmpty()) {
-                            Toast.makeText(context, "No log entries yet", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, emptyLabel, Toast.LENGTH_SHORT).show()
                             return@IconButton
                         }
                         scope.launch {
@@ -110,22 +119,22 @@ fun LogsScreen(onBack: () -> Unit) {
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             context.startActivity(
-                                Intent.createChooser(shareIntent, "Save or send FoxyVPN logs").apply {
+                                Intent.createChooser(shareIntent, shareLabel).apply {
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 },
                             )
                         }
                     }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Save/share logs as a file")
+                        Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.logs_share_file))
                     }
                     IconButton(onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("FoxyVPN logs", AppLogger.exportAsText()))
+                        clipboard.setPrimaryClip(ClipData.newPlainText(appName, AppLogger.exportAsText()))
                     }) {
-                        Icon(Icons.Filled.ContentCopy, contentDescription = "Copy logs")
+                        Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.logs_copy))
                     }
                     IconButton(onClick = { AppLogger.clear() }) {
-                        Icon(Icons.Filled.DeleteSweep, contentDescription = "Clear logs")
+                        Icon(Icons.Filled.DeleteSweep, contentDescription = stringResource(R.string.logs_clear))
                     }
                 },
             )
@@ -142,7 +151,7 @@ fun LogsScreen(onBack: () -> Unit) {
                         selected = filter == option,
                         onClick = { filter = option },
 
-                        label = { Text("${option.label} ($count)") },
+                        label = { Text("${stringResource(option.labelRes)} ($count)") },
                     )
                 }
             }
@@ -154,9 +163,9 @@ fun LogsScreen(onBack: () -> Unit) {
                 ) {
                     Text(
                         when {
-                            entries.isEmpty() -> "No log entries yet."
-                            filter == LogFilter.PROBLEMS -> "No warnings or errors. Nothing has gone wrong."
-                            else -> "Nothing matches this filter."
+                            entries.isEmpty() -> stringResource(R.string.logs_empty)
+                            filter == LogFilter.PROBLEMS -> stringResource(R.string.logs_empty_problems)
+                            else -> stringResource(R.string.logs_no_match)
                         },
                         modifier = Modifier.padding(24.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

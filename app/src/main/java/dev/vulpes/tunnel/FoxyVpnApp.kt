@@ -1,5 +1,6 @@
 package dev.vulpes.tunnel
 
+import io.netty.util.ResourceLeakDetector
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -32,6 +33,11 @@ class FoxyVpnApp : Application() {
         CrashReporter.replayLastCrashIfAny(this)
 
         NettyLoggingBridge.install()
+        if (BuildConfig.DEBUG) {
+            // Paranoid level samples every ByteBuf and reports the full allocation trace on a
+            // leak. Far too slow to ship, but exactly what is wanted in a debug build.
+            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID)
+        }
         installConscrypt()
         tokenStore = TokenStore(this)
         proxyStateStore = ProxyStateStore(this)

@@ -365,7 +365,8 @@ fun ServerListScreen(
                                         } else {
                                             null
                                         },
-                                        serverCount = city.servers.size,
+                                        serverCount = city.servers.count { !it.quarantined },
+                                        quarantinedCount = city.servers.count { it.quarantined },
                                         pingMs = pingMs,
                                         pingState = pingState,
                                         isFavorite = isFavorite,
@@ -521,6 +522,7 @@ private fun CityRow(
     cityName: String,
     countryLabel: String?,
     serverCount: Int,
+    quarantinedCount: Int,
     pingMs: Int?,
     pingState: PingState,
     isFavorite: Boolean,
@@ -567,11 +569,17 @@ private fun CityRow(
                 } else {
                     stringResource(R.string.locations_servers_count, serverCount)
                 }
-                val subtitle = if (countryLabel != null) {
+                val limitedNote = if (quarantinedCount > 0) {
+                    "  \u2022  " + stringResource(R.string.locations_limited, quarantinedCount)
+                } else {
+                    ""
+                }
+                val base = if (countryLabel != null) {
                     "$countryLabel  \u2022  $serverLabel"
                 } else {
                     serverLabel
                 }
+                val subtitle = base + limitedNote
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,

@@ -37,7 +37,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.FxaAuthRepository
 import dev.vulpes.tunnel.data.SessionStatus
 import dev.vulpes.tunnel.ui.components.AuroraBackdrop
@@ -86,13 +88,13 @@ fun SplashScreen(
             Spacer(Modifier.height(22.dp))
 
             Text(
-                "FoxyVPN",
+                stringResource(R.string.app_name),
                 fontSize = 30.sp,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Securing your connection",
+                stringResource(R.string.splash_securing),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

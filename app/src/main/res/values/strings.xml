@@ -9,6 +9,11 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
     <string name="action_select">Select</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_verify">Verify</string>
+    <string name="action_open">Open</string>
+    <string name="value_none">None</string>
+    <string name="value_not_set">Not set</string>
 
     <!-- Connection status -->
     <string name="status_protected">Protected</string>
@@ -30,6 +35,9 @@
     <string name="theme_light_word">light</string>
     <string name="theme_dark_word">dark</string>
 
+    <!-- Splash -->
+    <string name="splash_securing">Securing your connection</string>
+
     <!-- Session dashboard -->
     <string name="session_section">This session</string>
     <string name="session_duration">Duration</string>
@@ -46,10 +54,13 @@
     <string name="quota_unlimited">Unlimited data</string>
     <string name="quota_unlimited_subtitle">This account has no monthly cap</string>
     <string name="quota_resets_in">Resets in %1$s</string>
-    <string name="quota_resets_on">Resets %1$s</string>
     <string name="quota_unavailable">Allowance unknown</string>
     <string name="quota_unavailable_subtitle">The server did not report a quota</string>
-    <string name="quota_refresh">Refresh allowance</string>
+
+    <!-- Home location card -->
+    <string name="home_location">Location</string>
+    <string name="home_location_default">Recommended</string>
+    <string name="home_location_default_subtitle">Fastest available server</string>
 
     <!-- Locations -->
     <string name="locations_title">Choose location</string>
@@ -60,16 +71,13 @@
     <string name="locations_favorites">Favorites</string>
     <string name="locations_fastest">Fastest</string>
     <string name="locations_all">All locations</string>
-    <string name="locations_sort">Sort</string>
-    <string name="locations_sort_country">Country A–Z</string>
-    <string name="locations_sort_latency">Lowest latency</string>
     <string name="locations_latency_value">%1$d ms</string>
     <string name="locations_latency_measuring">measuring…</string>
     <string name="locations_latency_unavailable">unavailable</string>
     <string name="locations_servers_count">%1$d servers</string>
     <string name="locations_one_server">1 server</string>
+    <string name="locations_limited">%1$d unavailable</string>
     <string name="locations_no_servers">No servers available</string>
-    <string name="locations_none_for_country">No available servers for %1$s</string>
     <string name="locations_none_for_city">No available servers in %1$s</string>
     <string name="locations_load_failed">Failed to load the server list</string>
     <string name="locations_selected">Selected</string>
@@ -77,21 +85,122 @@
     <string name="locations_favorite_remove">Remove from favorites</string>
     <string name="locations_count">%1$d locations</string>
 
-    <!-- Home location card -->
-    <string name="home_location">Location</string>
-    <string name="home_location_default">Recommended</string>
-    <string name="home_location_default_subtitle">Fastest available server</string>
+    <!-- Sign in -->
+    <string name="login_title">Sign in with Firefox</string>
+    <string name="login_email">Firefox account email</string>
+    <string name="login_password">Password</string>
+    <string name="login_code">Confirmation code</string>
+    <string name="login_code_hint">Enter the confirmation code sent to your email</string>
+    <string name="login_explainer">FoxyVPN runs on the free 50 GB of monthly VPN traffic Mozilla includes with a Firefox account. No subscription is required.</string>
+    <string name="login_create_account">Create a Firefox account</string>
+    <string name="login_create_account_hint">Opens the sign-up page in your browser. Come back here and sign in once your account is confirmed.</string>
+
+    <!-- Logs -->
+    <string name="logs_title">Logs</string>
+    <string name="logs_empty">No log entries yet</string>
+    <string name="logs_empty_problems">No warnings or errors. Nothing has gone wrong.</string>
+    <string name="logs_no_match">Nothing matches this filter.</string>
+    <string name="logs_filter_all">All</string>
+    <string name="logs_filter_info">Info</string>
+    <string name="logs_filter_problems">Problems</string>
+    <string name="logs_clear">Clear logs</string>
+    <string name="logs_copy">Copy logs</string>
+    <string name="logs_share">Save or send logs</string>
+    <string name="logs_share_file">Save/share logs as a file</string>
+
+    <!-- Account -->
+    <string name="account_title">Account</string>
+    <string name="account_provider">Firefox Account</string>
+    <string name="account_signed_in">Signed in with Mozilla VPN</string>
+    <string name="account_subscription">Subscription</string>
+    <string name="account_id">Account ID</string>
+    <string name="account_data_remaining">Data remaining</string>
+    <string name="account_active">Active</string>
+    <string name="account_inactive">Inactive</string>
+    <string name="account_unlimited">Unlimited</string>
+    <string name="account_limited">Limited</string>
+    <string name="account_limited_to">Limited to %1$s</string>
+    <string name="account_manage">Manage subscription</string>
+    <string name="account_refresh">Refresh</string>
+    <string name="account_load_failed">Could not load account info</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_connection">Connection</string>
+    <string name="settings_section_dns">DNS</string>
+    <string name="settings_section_local_proxy">Local proxy</string>
+    <string name="settings_section_split">Split tunneling</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_reliability">Reliability</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_section_account">Account</string>
+
+    <string name="settings_verify_exit">Verify exit location</string>
+    <string name="settings_verify_exit_desc">Check that the tunnel exits in the selected country</string>
+    <string name="settings_encrypted_dns">Encrypted DNS</string>
+    <string name="settings_custom_dns">Use a custom DNS server</string>
+    <string name="settings_custom_dns_desc">Send your apps\' DNS queries to a server you choose</string>
+    <string name="settings_dns_server">DNS server</string>
+    <string name="settings_dns_automatic">Use whichever answers first</string>
+    <string name="settings_dns_off">Use the network\'s own DNS</string>
+
+    <string name="settings_proxy_only">Proxy-only mode</string>
+    <string name="settings_proxy_only_desc">Run only the local SOCKS5 proxy, without a VPN interface</string>
+    <string name="settings_local_address">Local address</string>
+    <string name="settings_local_port">Local port</string>
+
+    <string name="settings_excluded_apps">Excluded apps</string>
+    <string name="settings_excluded_count">%1$d app(s) bypass the VPN</string>
+    <string name="settings_split_desc">Selected apps bypass the VPN and use your normal connection.</string>
+    <string name="settings_search_apps">Search apps</string>
+    <string name="settings_no_apps_match">No apps match “%1$s”</string>
+
+    <string name="settings_custom_edge">Custom edge address</string>
+    <string name="settings_edge_host_hint">Host or IP</string>
+    <string name="settings_edge_hint">Leave empty to resolve the server hostname normally.</string>
+
+    <string name="settings_upstream">Chain through upstream proxy</string>
+    <string name="settings_upstream_desc">Connect to the VPN server through another proxy first</string>
+    <string name="settings_proxy_type">Proxy type</string>
+    <string name="settings_proxy_address">Proxy address</string>
+    <string name="settings_proxy_credentials">Proxy credentials</string>
+    <string name="settings_hint_port">Port (1–65535)</string>
+    <string name="settings_hint_username">Username (optional)</string>
+    <string name="settings_hint_password">Password (optional)</string>
+
+    <string name="settings_always_on">Always-on VPN</string>
+    <string name="settings_always_on_desc">Ask Android to keep the tunnel up, including after a reboot</string>
+    <string name="settings_battery">Battery restrictions</string>
+    <string name="settings_battery_desc">Some devices kill background VPNs. Exempt this app if the tunnel drops.</string>
+    <string name="settings_battery_ok">Not restricted</string>
+
+    <string name="settings_view_logs">View logs</string>
+    <string name="settings_view_logs_desc">Recent connection activity</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_source">Source code</string>
+    <string name="settings_manage_account">Manage account</string>
+    <string name="settings_account_desc">Subscription status and data usage</string>
+    <string name="settings_sign_out">Sign out</string>
 
     <!-- Kill switch -->
     <string name="killswitch_title">Kill switch</string>
     <string name="killswitch_subtitle">Block all traffic if the tunnel drops, instead of falling back to your real connection</string>
-    <string name="killswitch_leak_warning">The tunnel dropped and traffic is unprotected. Reconnecting…</string>
+        <string name="notif_connecting">Connecting…</string>
+    <string name="notif_waiting_network">Waiting for network…</string>
+    <string name="notif_reconnecting">Reconnecting…</string>
+    <string name="notif_connected">Connected • %1$s</string>
+    <string name="notif_proxy_active">Proxy active • %1$s</string>
     <string name="killswitch_blocked">Traffic blocked — the tunnel is down</string>
 
     <!-- Quick settings tile -->
     <string name="tile_label">FoxyVPN</string>
 
-    <!-- Errors -->
-    <string name="error_not_signed_in">Not signed in.</string>
-    <string name="error_generic">Something went wrong</string>
+    <!-- Errors shown to the user -->
+    <string name="err_not_signed_in">You are signed out. Sign in again to continue.</string>
+    <string name="err_signin">Sign-in failed. Check your email and password.</string>
+    <string name="err_verify">That code was not accepted. Try again.</string>
+    <string name="err_network">Could not reach the server. Check your connection.</string>
+    <string name="err_quota">This month\'s allowance is used up. It resets next month.</string>
+    <string name="err_session_expired">Your session expired. Sign in again.</string>
+    <string name="err_generic">Something went wrong</string>
 </resources>

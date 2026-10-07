@@ -35,7 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.FxaAuthRepository
 import dev.vulpes.tunnel.data.GUARDIAN_ENDPOINT_DEFAULT
 import dev.vulpes.tunnel.data.GuardianClient
@@ -50,6 +52,8 @@ fun AccountScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val loadFailedLabel = stringResource(R.string.account_load_failed)
+    val signedOutLabel = stringResource(R.string.err_not_signed_in)
     var entitlement by remember { mutableStateOf<Entitlement?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -61,12 +65,12 @@ fun AccountScreen(
             val accessToken = authRepository.currentAccessToken()
             if (accessToken == null) {
                 isLoading = false
-                errorMessage = "Not signed in."
+                errorMessage = signedOutLabel
                 return@launch
             }
             runCatching { GuardianClient().fetchUserInfo(GUARDIAN_ENDPOINT_DEFAULT, accessToken) }
                 .onSuccess { entitlement = it }
-                .onFailure { errorMessage = it.message ?: "Failed to load account info" }
+                .onFailure { errorMessage = loadFailedLabel }
             isLoading = false
         }
     }
@@ -76,15 +80,15 @@ fun AccountScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Account") },
+                title = { Text(stringResource(R.string.account_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.account_refresh))
                     }
                 },
             )
@@ -105,9 +109,9 @@ fun AccountScreen(
                 )
                 Spacer(Modifier.padding(start = 12.dp))
                 Column {
-                    Text("Firefox Account", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.account_provider), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Signed in with Mozilla VPN",
+                        stringResource(R.string.account_signed_in),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -128,7 +132,7 @@ fun AccountScreen(
                 errorMessage != null -> Column {
                     Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.padding(top = 8.dp))
-                    TextButton(onClick = { refresh() }) { Text("Retry") }
+                    TextButton(onClick = { refresh() }) { Text(stringResource(R.string.action_retry)) }
                 }
                 entitlement != null -> {
                     val info = entitlement!!
@@ -136,16 +140,26 @@ fun AccountScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            AccountInfoRow("Subscription", if (info.subscribed) "Active" else "Inactive")
-                            AccountInfoRow("Account ID", info.uid.ifBlank { "\u2014" })
+                            AccountInfoRow(
+                                stringResource(R.string.account_subscription),
+                                if (info.subscribed) {
+                                    stringResource(R.string.account_active)
+                                } else {
+                                    stringResource(R.string.account_inactive)
+                                },
+                            )
+                            AccountInfoRow(stringResource(R.string.account_id), info.uid.ifBlank { "\u2014" })
 
                             AccountInfoRow(
-                                "Data remaining",
+                                stringResource(R.string.account_data_remaining),
                                 when {
-                                    !info.limitedBandwidth -> "Unlimited"
+                                    !info.limitedBandwidth -> stringResource(R.string.account_unlimited)
                                     info.quotaRemaining != null -> formatBytes(info.quotaRemaining)
-                                    info.maxBytes != null -> "Limited to ${formatBytes(info.maxBytes)}"
-                                    else -> "Limited"
+                                    info.maxBytes != null -> stringResource(
+                                        R.string.account_limited_to,
+                                        formatBytes(info.maxBytes),
+                                    )
+                                    else -> stringResource(R.string.account_limited)
                                 },
                             )
                         }
@@ -154,7 +168,7 @@ fun AccountScreen(
                     TextButton(onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GUARDIAN_ENDPOINT_DEFAULT)))
                     }) {
-                        Text("Manage subscription")
+                        Text(stringResource(R.string.account_manage))
                     }
                 }
             }

@@ -1,6 +1,8 @@
 package dev.vulpes.tunnel.data
 
 import android.content.Context
+import androidx.annotation.StringRes
+import dev.vulpes.tunnel.R
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dev.vulpes.tunnel.ui.theme.ThemeMode
@@ -27,6 +29,14 @@ class SettingsStore(context: Context) {
             it.name == prefs.getString(KEY_THEME_MODE, null)
         } ?: ThemeMode.SYSTEM
         set(value) { prefs.edit().putString(KEY_THEME_MODE, value.name).apply() }
+
+    /**
+     * When on, traffic is blocked rather than leaked if the tunnel drops, and apps are not
+     * permitted to bypass the VPN interface.
+     */
+    var killSwitchEnabled: Boolean
+        get() = prefs.getBoolean(KEY_KILL_SWITCH, false)
+        set(value) { prefs.edit().putBoolean(KEY_KILL_SWITCH, value).apply() }
 
     var exitCheckEnabled: Boolean
         get() = prefs.getBoolean(KEY_EXIT_CHECK, true)
@@ -114,12 +124,15 @@ class SettingsStore(context: Context) {
 
     enum class UpstreamProxyType { SOCKS5, HTTP }
 
-    enum class DohProvider(val label: String) {
-        AUTOMATIC("Automatic"),
+    /**
+     * @param labelRes null for entries whose label is a brand name and must not be translated.
+     */
+    enum class DohProvider(val label: String, @StringRes val labelRes: Int? = null) {
+        AUTOMATIC("Automatic", R.string.settings_dns_automatic),
         CLOUDFLARE("Cloudflare"),
         GOOGLE("Google"),
         QUAD9("Quad9"),
-        OFF("Off (use the network's resolver)"),
+        OFF("Off (use the network's resolver)", R.string.settings_dns_off),
         ;
 
         val addresses: List<String>
@@ -134,6 +147,7 @@ class SettingsStore(context: Context) {
 
     companion object {
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_KILL_SWITCH = "kill_switch_enabled"
         private const val KEY_EXIT_CHECK = "exit_check_enabled"
         private const val KEY_SOCKS_BIND_ADDRESS = "socks_bind_address"
         private const val KEY_SOCKS_PORT = "socks_port"
