@@ -38,17 +38,17 @@ val hasReleaseSigning = releaseKeystoreFile.exists() &&
     !releaseStorePassword.isNullOrBlank()
 
 android {
-    namespace = "com.vauth.foxyvpn"
+    namespace = "dev.vulpes.tunnel"
     compileSdk = 35
 
     ndkVersion = "26.1.10909125"
 
     defaultConfig {
-        applicationId = "com.vauth.foxyvpn"
+        applicationId = "dev.vulpes.tunnel"
         minSdk = 26
         targetSdk = 35
-        versionCode = 42
-        versionName = "1.2.0"
+        versionCode = 43
+        versionName = "1.3.0"
 
         externalNativeBuild {
             ndkBuild {
@@ -57,7 +57,7 @@ android {
 
                     "APP_PLATFORM=android-26",
 
-                    "APP_CFLAGS=-DPKGNAME=com/vauth/foxyvpn/vpn/tun -DCLSNAME=HevSocks5Tunnel",
+                    "APP_CFLAGS=-DPKGNAME=dev/vulpes/tunnel/vpn/tun -DCLSNAME=HevSocks5Tunnel",
                 )
             }
         }

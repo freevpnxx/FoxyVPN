@@ -50,7 +50,7 @@ Jetpack Compose (Material 3) UI.*
 
 1. **Get a Firefox account.** If you do not have one, create it for free at
    [accounts.firefox.com](https://accounts.firefox.com/signup).
-2. **Install the APK** from the [Releases](https://github.com/vauth/foxyvpn/releases)
+2. **Install the APK** from the [Releases](https://github.com/freevpnxx/FoxyVPN/releases)
    page.
 3. **Sign in** with that account's email and password.
 4. **Pick a location** and tap the power button.
@@ -75,7 +75,7 @@ allowance is used up for the month, connections stop working until it resets.
 ## ⚙️ Build
 * #### Clone Repository:
 ```bash
-git clone https://github.com/vauth/foxyvpn.git
+git clone https://github.com/freevpnxx/FoxyVPN.git
 cd foxyvpn
    ```
 * #### Build and Install:

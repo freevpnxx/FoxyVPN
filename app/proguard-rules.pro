@@ -1,8 +1,8 @@
 -dontwarn io.netty.**
 -keep class io.netty.** { *; }
 
--keep class com.vauth.foxyvpn.vpn.tun.HevSocks5Tunnel { *; }
--keepnames class com.vauth.foxyvpn.vpn.tun.HevSocks5Tunnel
+-keep class dev.vulpes.tunnel.vpn.tun.HevSocks5Tunnel { *; }
+-keepnames class dev.vulpes.tunnel.vpn.tun.HevSocks5Tunnel
 -keepclasseswithmembernames class * {
     native <methods>;
 }
