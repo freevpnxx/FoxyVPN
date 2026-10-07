@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -36,9 +38,30 @@ jobs:
         run: gradle wrapper --gradle-version 8.10.2 || true
 
       - name: Assemble debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/assemble.log
+
+      - name: Report compile errors as a commit comment
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### ❌ Build failed on \`${GITHUB_REF_NAME}\`"
+            echo
+            echo '```'
+            grep -E "^e: |^w: .*(error|unresolved)|error:|FAILURE:|What went wrong|^> |Execution failed for task" /tmp/assemble.log 2>/dev/null | head -80 \
+              || echo "no matching lines captured"
+            echo '```'
+          } > /tmp/comment.md
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            -f body="$(cat /tmp/comment.md)" >/dev/null
+          echo "Posted the compile errors as a commit comment."
 
       - name: Upload debug APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: foxyvpn-debug-apk
