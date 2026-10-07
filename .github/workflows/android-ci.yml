@@ -97,12 +97,35 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon
 
+      - name: Assemble debug APK
+        if: steps.signing.outputs.signed != 'true'
+        run: ./gradlew assembleDebug --no-daemon
+
       - name: Remove the decoded keystore
         if: always()
         run: rm -f release-keystore.jks
 
+      # An unsigned APK cannot be installed on Android at all, so publishing one just
+      # produces a confusing "app not installed" error. When no signing secret is set we
+      # publish the debug-signed build instead: it is signed with the ephemeral debug key,
+      # so it installs. Add the SIGNING_KEYSTORE_BASE64 secret to get a properly signed
+      # release build whose signature is stable across releases.
+      - name: Stage the APKs to publish
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          mkdir -p dist
+          if [ "$SIGNED" = "true" ]; then
+            cp app/build/outputs/apk/release/*.apk dist/
+            echo "Publishing the signed release APK."
+          else
+            cp app/build/outputs/apk/debug/*.apk dist/
+            echo "::warning::No SIGNING_KEYSTORE_BASE64 secret; publishing the debug-signed APK so it is installable."
+          fi
+          ls -la dist
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          files: dist/*.apk
           generate_release_notes: true

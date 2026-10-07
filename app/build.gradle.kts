@@ -47,8 +47,8 @@ android {
         applicationId = "dev.vulpes.tunnel"
         minSdk = 26
         targetSdk = 35
-        versionCode = 43
-        versionName = "1.3.0"
+        versionCode = 44
+        versionName = "1.3.1"
 
         externalNativeBuild {
             ndkBuild {
