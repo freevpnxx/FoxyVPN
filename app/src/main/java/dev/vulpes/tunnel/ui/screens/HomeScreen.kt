@@ -12,7 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,8 +22,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BrightnessAuto
@@ -52,19 +53,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.vulpes.tunnel.FoxyVpnApp
-import dev.vulpes.tunnel.data.formatBytesPerSecond
+import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.model.ConnectionState
 import dev.vulpes.tunnel.ui.components.AuroraBackdrop
 import dev.vulpes.tunnel.ui.components.GlassCard
 import dev.vulpes.tunnel.ui.components.PowerOrb
-import dev.vulpes.tunnel.ui.components.StatBlock
+import dev.vulpes.tunnel.ui.components.QuotaCard
+import dev.vulpes.tunnel.ui.components.SessionStrip
 import dev.vulpes.tunnel.ui.components.StatusPill
+import dev.vulpes.tunnel.ui.components.rememberTickingElapsed
 import dev.vulpes.tunnel.ui.theme.LocalFoxyStatusColors
 import dev.vulpes.tunnel.ui.theme.ThemeController
 import dev.vulpes.tunnel.ui.theme.ThemeMode
@@ -83,7 +87,7 @@ fun HomeScreen(
 ) {
     val state by FoxyVpnService.state.collectAsState()
     val lastError by FoxyVpnService.lastError.collectAsState()
-    val speed by FoxyVpnService.speed.collectAsState()
+    val session by FoxyVpnService.sessionStats.collectAsState()
     val selectedProxy by app.proxyStateStore.selectedProxyFlow.collectAsState()
 
     val statusColors = LocalFoxyStatusColors.current
@@ -97,7 +101,11 @@ fun HomeScreen(
     }
     val accent by animateColorAsState(targetValue = targetAccent, label = "home-accent")
 
-    // Stagger the entrance so the screen assembles itself rather than popping in as one block.
+    val elapsedMs = rememberTickingElapsed(
+        startedAtElapsedMs = session.startedAtElapsedMs,
+        active = state == ConnectionState.CONNECTED,
+    )
+
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(80)
@@ -113,9 +121,9 @@ fun HomeScreen(
     )
 
     val statusLabel = when (state) {
-        ConnectionState.CONNECTED -> "Protected"
-        ConnectionState.CONNECTING -> "Establishing tunnel"
-        ConnectionState.DISCONNECTED -> "Not connected"
+        ConnectionState.CONNECTED -> stringResource(R.string.status_protected)
+        ConnectionState.CONNECTING -> stringResource(R.string.status_connecting)
+        ConnectionState.DISCONNECTED -> stringResource(R.string.status_disconnected)
     }
 
     Scaffold(
@@ -131,7 +139,7 @@ fun HomeScreen(
                             modifier = Modifier.size(22.dp),
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("FoxyVPN", style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -160,10 +168,14 @@ fun HomeScreen(
                                 ThemeMode.DARK -> Icons.Filled.DarkMode
                             },
                             contentDescription = when (mode) {
-                                ThemeMode.SYSTEM ->
-                                    "Theme: follow system. Tap to switch to ${if (showingDark) "light" else "dark"} mode"
-                                ThemeMode.LIGHT -> "Theme: light. Tap for dark mode, long press to follow the system"
-                                ThemeMode.DARK -> "Theme: dark. Tap for light mode, long press to follow the system"
+                                ThemeMode.SYSTEM -> stringResource(
+                                    R.string.theme_system,
+                                    stringResource(
+                                        if (showingDark) R.string.theme_light_word else R.string.theme_dark_word,
+                                    ),
+                                )
+                                ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                                ThemeMode.DARK -> stringResource(R.string.theme_dark)
                             },
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -184,11 +196,12 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 24.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
             ) {
                 Spacer(Modifier.height(topGap))
+                Spacer(Modifier.height(8.dp))
 
                 AnimatedVisibility(
                     visible = entered,
@@ -201,7 +214,7 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(20.dp))
 
                 AnimatedVisibility(
                     visible = entered,
@@ -210,6 +223,7 @@ fun HomeScreen(
                     PowerOrb(
                         state = state,
                         accent = accent,
+                        size = 184.dp,
                         onToggle = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             if (state == ConnectionState.DISCONNECTED) onRequestConnect() else onDisconnect()
@@ -217,13 +231,13 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
 
                 Text(
                     text = when (state) {
-                        ConnectionState.CONNECTED -> "Connected"
-                        ConnectionState.CONNECTING -> "Connecting\u2026"
-                        ConnectionState.DISCONNECTED -> "Disconnected"
+                        ConnectionState.CONNECTED -> stringResource(R.string.state_connected)
+                        ConnectionState.CONNECTING -> stringResource(R.string.state_connecting)
+                        ConnectionState.DISCONNECTED -> stringResource(R.string.state_disconnected)
                     },
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
@@ -231,9 +245,9 @@ fun HomeScreen(
 
                 Text(
                     text = when (state) {
-                        ConnectionState.CONNECTED -> "All traffic is routed through the tunnel"
-                        ConnectionState.CONNECTING -> "Tap to cancel"
-                        ConnectionState.DISCONNECTED -> "Tap the ring to start the tunnel"
+                        ConnectionState.CONNECTED -> stringResource(R.string.state_connected_subtitle)
+                        ConnectionState.CONNECTING -> stringResource(R.string.state_connecting_subtitle)
+                        ConnectionState.DISCONNECTED -> stringResource(R.string.state_disconnected_subtitle)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -255,46 +269,20 @@ fun HomeScreen(
                 ) {
                     Column {
                         Spacer(Modifier.height(18.dp))
-                        GlassCard(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                StatBlock(
-                                    label = "Download",
-                                    value = formatBytesPerSecond(speed.downBytesPerSecond),
-                                    accent = statusColors.connected,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                Box(
-                                    Modifier
-                                        .width(1.dp)
-                                        .height(34.dp)
-                                        .clip(RoundedCornerShape(1.dp))
-                                        .background(
-                                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                        ),
-                                )
-                                StatBlock(
-                                    label = "Upload",
-                                    value = formatBytesPerSecond(speed.upBytesPerSecond),
-                                    accent = statusColors.connected,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
+                        SessionStrip(stats = session, elapsedMs = elapsedMs, accent = accent)
+                        Spacer(Modifier.height(12.dp))
+                        QuotaCard(stats = session, accent = accent)
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
 
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onOpenServers,
                 ) {
                     Text(
-                        "Location",
+                        stringResource(R.string.home_location),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -321,11 +309,12 @@ fun HomeScreen(
                         Column(Modifier.weight(1f)) {
                             Text(
                                 selectedProxy?.let { it.countryName.ifBlank { it.countryCode } }
-                                    ?: "Recommended",
+                                    ?: stringResource(R.string.home_location_default),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             Text(
-                                selectedProxy?.let { it.host } ?: "Fastest available server",
+                                selectedProxy?.host
+                                    ?: stringResource(R.string.home_location_default_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -338,7 +327,7 @@ fun HomeScreen(
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Box(
                     modifier = Modifier
@@ -356,13 +345,15 @@ fun HomeScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Settings",
+                            stringResource(R.string.action_settings),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 15.sp,
                         )
                     }
                 }
+
+                Spacer(Modifier.height(28.dp))
             }
         }
     }

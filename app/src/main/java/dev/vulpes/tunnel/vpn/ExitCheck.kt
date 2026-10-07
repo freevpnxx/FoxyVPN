@@ -12,9 +12,18 @@ private const val EXIT_CHECK_URL = "https://www.cloudflare.com/cdn-cgi/trace"
 
 private const val EXIT_CHECK_TIMEOUT_SECONDS = 15L
 
+/** What the exit node actually looks like from the outside. */
+data class ExitInfo(
+    val countryCode: String,
+    val ip: String? = null,
+)
+
 class ExitCheck {
 
-    suspend fun verifyExitCountry(socksPort: Int, expectedCountryCode: String?): Result<String> =
+    suspend fun verifyExitCountry(
+        socksPort: Int,
+        expectedCountryCode: String?,
+    ): Result<ExitInfo> =
         withContext(Dispatchers.IO) {
 
             val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort))
@@ -37,13 +46,19 @@ class ExitCheck {
                             .orEmpty()
                         if (actualCountry.isEmpty()) error("Exit check response did not report a location")
 
+                        val actualIp = body.lineSequence()
+                            .firstOrNull { it.startsWith("ip=") }
+                            ?.removePrefix("ip=")
+                            ?.trim()
+                            ?.takeIf { it.isNotEmpty() }
+
                         if (expectedCountryCode != null &&
                             !expectedCountryCode.equals("REC", ignoreCase = true) &&
                             !actualCountry.equals(expectedCountryCode, ignoreCase = true)
                         ) {
                             error("Exit country mismatch: expected $expectedCountryCode, got $actualCountry")
                         }
-                        actualCountry
+                        ExitInfo(countryCode = actualCountry, ip = actualIp)
                     }
                 }
             } finally {

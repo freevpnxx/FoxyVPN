@@ -1,3 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FoxyVPN</string>
+
+    <!-- Common -->
+    <string name="action_back">Back</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_select">Select</string>
+
+    <!-- Connection status -->
+    <string name="status_protected">Protected</string>
+    <string name="status_connecting">Establishing tunnel</string>
+    <string name="status_disconnected">Not connected</string>
+    <string name="state_connected">Connected</string>
+    <string name="state_connecting">Connecting…</string>
+    <string name="state_disconnected">Disconnected</string>
+    <string name="state_connected_subtitle">All traffic is routed through the tunnel</string>
+    <string name="state_connecting_subtitle">Tap to cancel</string>
+    <string name="state_disconnected_subtitle">Tap the ring to start the tunnel</string>
+    <string name="power_connect">Connect</string>
+    <string name="power_disconnect">Disconnect</string>
+
+    <!-- Theme -->
+    <string name="theme_system">Theme: follow system. Tap to switch to %1$s mode</string>
+    <string name="theme_light">Theme: light. Tap for dark mode, long press to follow the system</string>
+    <string name="theme_dark">Theme: dark. Tap for light mode, long press to follow the system</string>
+    <string name="theme_light_word">light</string>
+    <string name="theme_dark_word">dark</string>
+
+    <!-- Session dashboard -->
+    <string name="session_section">This session</string>
+    <string name="session_duration">Duration</string>
+    <string name="session_download">Download</string>
+    <string name="session_upload">Upload</string>
+    <string name="session_exit">Exit node</string>
+    <string name="session_exit_unknown">Not checked yet</string>
+    <string name="session_reconnects">Reconnects</string>
+
+    <!-- Quota -->
+    <string name="quota_section">Monthly allowance</string>
+    <string name="quota_remaining">%1$s left</string>
+    <string name="quota_used_of">%1$s of %2$s used</string>
+    <string name="quota_unlimited">Unlimited data</string>
+    <string name="quota_unlimited_subtitle">This account has no monthly cap</string>
+    <string name="quota_resets_in">Resets in %1$s</string>
+    <string name="quota_resets_on">Resets %1$s</string>
+    <string name="quota_unavailable">Allowance unknown</string>
+    <string name="quota_unavailable_subtitle">The server did not report a quota</string>
+    <string name="quota_refresh">Refresh allowance</string>
+
+    <!-- Locations -->
+    <string name="locations_title">Choose location</string>
+    <string name="locations_search">Search country or city</string>
+    <string name="locations_search_empty">No location matches “%1$s”</string>
+    <string name="locations_recommended">Recommended</string>
+    <string name="locations_recommended_subtitle">Fastest available, chosen automatically</string>
+    <string name="locations_favorites">Favorites</string>
+    <string name="locations_fastest">Fastest</string>
+    <string name="locations_all">All locations</string>
+    <string name="locations_sort">Sort</string>
+    <string name="locations_sort_country">Country A–Z</string>
+    <string name="locations_sort_latency">Lowest latency</string>
+    <string name="locations_latency_value">%1$d ms</string>
+    <string name="locations_latency_measuring">measuring…</string>
+    <string name="locations_latency_unavailable">unavailable</string>
+    <string name="locations_servers_count">%1$d servers</string>
+    <string name="locations_one_server">1 server</string>
+    <string name="locations_no_servers">No servers available</string>
+    <string name="locations_none_for_country">No available servers for %1$s</string>
+    <string name="locations_none_for_city">No available servers in %1$s</string>
+    <string name="locations_load_failed">Failed to load the server list</string>
+    <string name="locations_selected">Selected</string>
+    <string name="locations_favorite_add">Add to favorites</string>
+    <string name="locations_favorite_remove">Remove from favorites</string>
+    <string name="locations_count">%1$d locations</string>
+
+    <!-- Home location card -->
+    <string name="home_location">Location</string>
+    <string name="home_location_default">Recommended</string>
+    <string name="home_location_default_subtitle">Fastest available server</string>
+
+    <!-- Kill switch -->
+    <string name="killswitch_title">Kill switch</string>
+    <string name="killswitch_subtitle">Block all traffic if the tunnel drops, instead of falling back to your real connection</string>
+    <string name="killswitch_leak_warning">The tunnel dropped and traffic is unprotected. Reconnecting…</string>
+    <string name="killswitch_blocked">Traffic blocked — the tunnel is down</string>
+
+    <!-- Quick settings tile -->
+    <string name="tile_label">FoxyVPN</string>
+
+    <!-- Errors -->
+    <string name="error_not_signed_in">Not signed in.</string>
+    <string name="error_generic">Something went wrong</string>
 </resources>

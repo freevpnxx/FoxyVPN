@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">فاکسی‌وی‌پی‌ان</string>
+
+    <!-- عمومی -->
+    <string name="action_back">بازگشت</string>
+    <string name="action_settings">تنظیمات</string>
+    <string name="action_retry">تلاش دوباره</string>
+    <string name="action_cancel">انصراف</string>
+    <string name="action_save">ذخیره</string>
+    <string name="action_select">انتخاب</string>
+
+    <!-- وضعیت اتصال -->
+    <string name="status_protected">محافظت‌شده</string>
+    <string name="status_connecting">در حال برقراری تونل</string>
+    <string name="status_disconnected">وصل نیست</string>
+    <string name="state_connected">متصل</string>
+    <string name="state_connecting">در حال اتصال…</string>
+    <string name="state_disconnected">قطع</string>
+    <string name="state_connected_subtitle">همه‌ی ترافیک از تونل عبور می‌کند</string>
+    <string name="state_connecting_subtitle">برای لغو لمس کنید</string>
+    <string name="state_disconnected_subtitle">برای شروع تونل، حلقه را لمس کنید</string>
+    <string name="power_connect">اتصال</string>
+    <string name="power_disconnect">قطع اتصال</string>
+
+    <!-- پوسته -->
+    <string name="theme_system">پوسته: پیروی از سیستم. برای رفتن به حالت %1$s لمس کنید</string>
+    <string name="theme_light">پوسته: روشن. برای حالت تاریک لمس کنید، برای پیروی از سیستم نگه دارید</string>
+    <string name="theme_dark">پوسته: تاریک. برای حالت روشن لمس کنید، برای پیروی از سیستم نگه دارید</string>
+    <string name="theme_light_word">روشن</string>
+    <string name="theme_dark_word">تاریک</string>
+
+    <!-- داشبورد جلسه -->
+    <string name="session_section">این نشست</string>
+    <string name="session_duration">مدت اتصال</string>
+    <string name="session_download">دریافت</string>
+    <string name="session_upload">ارسال</string>
+    <string name="session_exit">نقطه‌ی خروج</string>
+    <string name="session_exit_unknown">هنوز بررسی نشده</string>
+    <string name="session_reconnects">اتصال مجدد</string>
+
+    <!-- سهمیه -->
+    <string name="quota_section">سهمیه‌ی ماهانه</string>
+    <string name="quota_remaining">%1$s باقی‌مانده</string>
+    <string name="quota_used_of">%1$s از %2$s مصرف شده</string>
+    <string name="quota_unlimited">ترافیک نامحدود</string>
+    <string name="quota_unlimited_subtitle">این حساب سقف ماهانه ندارد</string>
+    <string name="quota_resets_in">تا بازنشانی %1$s</string>
+    <string name="quota_resets_on">بازنشانی در %1$s</string>
+    <string name="quota_unavailable">سهمیه نامشخص</string>
+    <string name="quota_unavailable_subtitle">سرور سهمیه‌ای گزارش نکرد</string>
+    <string name="quota_refresh">به‌روزرسانی سهمیه</string>
+
+    <!-- مکان‌ها -->
+    <string name="locations_title">انتخاب مکان</string>
+    <string name="locations_search">جستجوی کشور یا شهر</string>
+    <string name="locations_search_empty">مکانی مطابق «%1$s» پیدا نشد</string>
+    <string name="locations_recommended">پیشنهادی</string>
+    <string name="locations_recommended_subtitle">سریع‌ترین گزینه، به‌صورت خودکار</string>
+    <string name="locations_favorites">علاقه‌مندی‌ها</string>
+    <string name="locations_fastest">سریع‌ترین</string>
+    <string name="locations_all">همه‌ی مکان‌ها</string>
+    <string name="locations_sort">مرتب‌سازی</string>
+    <string name="locations_sort_country">کشور (الفبا)</string>
+    <string name="locations_sort_latency">کمترین تأخیر</string>
+    <string name="locations_latency_value">%1$d میلی‌ثانیه</string>
+    <string name="locations_latency_measuring">در حال سنجش…</string>
+    <string name="locations_latency_unavailable">ناموفق</string>
+    <string name="locations_servers_count">%1$d سرور</string>
+    <string name="locations_one_server">۱ سرور</string>
+    <string name="locations_no_servers">سروری در دسترس نیست</string>
+    <string name="locations_none_for_country">سروری برای %1$s در دسترس نیست</string>
+    <string name="locations_none_for_city">سروری در %1$s در دسترس نیست</string>
+    <string name="locations_load_failed">دریافت فهرست سرورها ناموفق بود</string>
+    <string name="locations_selected">انتخاب‌شده</string>
+    <string name="locations_favorite_add">افزودن به علاقه‌مندی‌ها</string>
+    <string name="locations_favorite_remove">حذف از علاقه‌مندی‌ها</string>
+    <string name="locations_count">%1$d مکان</string>
+
+    <!-- کارت مکان در خانه -->
+    <string name="home_location">مکان</string>
+    <string name="home_location_default">پیشنهادی</string>
+    <string name="home_location_default_subtitle">سریع‌ترین سرور در دسترس</string>
+
+    <!-- کلید قطع اضطراری -->
+    <string name="killswitch_title">کلید قطع اضطراری</string>
+    <string name="killswitch_subtitle">اگر تونل قطع شد، به‌جای بازگشت به اتصال واقعی، همه‌ی ترافیک مسدود شود</string>
+    <string name="killswitch_leak_warning">تونل قطع شد و ترافیک محافظت نمی‌شود. در حال اتصال مجدد…</string>
+    <string name="killswitch_blocked">ترافیک مسدود است — تونل قطع شده</string>
+
+    <!-- کاشی تنظیمات سریع -->
+    <string name="tile_label">فاکسی‌وی‌پی‌ان</string>
+
+    <!-- خطاها -->
+    <string name="error_not_signed_in">وارد نشده‌اید.</string>
+    <string name="error_generic">مشکلی پیش آمد</string>
+</resources>

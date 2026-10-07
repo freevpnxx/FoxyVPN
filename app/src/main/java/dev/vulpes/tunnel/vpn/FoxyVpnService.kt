@@ -14,6 +14,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import dev.vulpes.tunnel.FoxyVpnApp
 import dev.vulpes.tunnel.MainActivity
@@ -62,6 +63,30 @@ data class TunnelSpeed(
     val downBytesPerSecond: Long = 0L,
     val upBytesPerSecond: Long = 0L,
 )
+
+/**
+ * Everything the dashboard needs to know about the current connection.
+ *
+ * [startedAtElapsedMs] uses `SystemClock.elapsedRealtime()` rather than wall-clock time so the
+ * displayed duration survives the user changing the system clock mid-session.
+ */
+data class SessionStats(
+    val startedAtElapsedMs: Long? = null,
+    val downBytesTotal: Long = 0L,
+    val upBytesTotal: Long = 0L,
+    val quotaMax: Long? = null,
+    val quotaRemaining: Long? = null,
+    val quotaResetEpochSeconds: Long? = null,
+    val quotaUnlimited: Boolean = false,
+    val exitIp: String? = null,
+    val exitCountry: String? = null,
+    val reconnects: Int = 0,
+) {
+    val isActive: Boolean get() = startedAtElapsedMs != null
+
+    fun elapsedMs(nowElapsedMs: Long): Long =
+        startedAtElapsedMs?.let { (nowElapsedMs - it).coerceAtLeast(0L) } ?: 0L
+}
 
 private const val TAG = "FoxyVpnService"
 private const val CONNECT_TIMEOUT_MS = 20_000L
@@ -634,13 +659,27 @@ class FoxyVpnService : VpnService() {
                 }
                 val guardian = GuardianClient()
 
-                return try {
+                val pass = try {
                     guardian.fetchProxyPass(GUARDIAN_ENDPOINT_DEFAULT, auth.accessToken)
                 } catch (invalid: TokenInvalidError) {
                     AppLogger.w(TAG, "proxy pass rejected, activating Guardian entitlement and retrying", invalid)
                     guardian.activateGuardian(GUARDIAN_ENDPOINT_DEFAULT, auth.accessToken)
                     guardian.fetchProxyPass(GUARDIAN_ENDPOINT_DEFAULT, auth.accessToken)
                 }
+
+                // The quota headers were being parsed by GuardianClient and then dropped. Surface
+                // them so the dashboard can show what is left of the monthly allowance.
+                mergeSessionStats { current ->
+                    current.copy(
+                        quotaMax = pass.quotaMax ?: current.quotaMax,
+                        quotaRemaining = pass.quotaRemaining ?: current.quotaRemaining,
+                        quotaResetEpochSeconds = pass.quotaReset ?: current.quotaResetEpochSeconds,
+                    )
+                }
+                if (pass.quotaMax == null && pass.quotaRemaining == null) {
+                    AppLogger.d(TAG, "proxy pass carried no quota headers; the allowance stays unknown")
+                }
+                pass
             }
 
             var currentPassExpiry: Long? = null
@@ -762,6 +801,13 @@ class FoxyVpnService : VpnService() {
             updateNotification(connectedText)
             AppLogger.i(TAG, "connect: CONNECTED via ${establishedCandidate.authority}")
 
+            mergeSessionStats { current ->
+                current.copy(
+                    startedAtElapsedMs = current.startedAtElapsedMs ?: SystemClock.elapsedRealtime(),
+                    reconnects = if (current.startedAtElapsedMs == null) 0 else current.reconnects + 1,
+                )
+            }
+
             startProxyPassRenewal(myGeneration, currentPassExpiry) { mintProxyPass() }
 
             if (settingsStore.exitCheckEnabled) {
@@ -769,7 +815,16 @@ class FoxyVpnService : VpnService() {
                     ExitCheck().verifyExitCountry(socksPort, establishedCandidate.countryCode)
                         .onSuccess { observed ->
                             if (myGeneration == connectionGeneration) {
-                                AppLogger.i(TAG, "exit check: observed country=$observed")
+                                AppLogger.i(
+                                    TAG,
+                                    "exit check: country=${observed.countryCode} ip=${observed.ip ?: "unknown"}",
+                                )
+                                mergeSessionStats { current ->
+                                    current.copy(
+                                        exitCountry = observed.countryCode,
+                                        exitIp = observed.ip,
+                                    )
+                                }
                             }
                         }
                         .onFailure { AppLogger.w(TAG, "exit check failed (non-fatal)", it) }
@@ -1037,6 +1092,7 @@ class FoxyVpnService : VpnService() {
         speedJob?.cancel()
         speedJob = null
         _speed.value = TunnelSpeed()
+        _sessionStats.value = SessionStats()
 
         tokenRenewalJob?.cancel()
         tokenRenewalJob = null
@@ -1078,10 +1134,19 @@ class FoxyVpnService : VpnService() {
                 val rxRate = ((stats[3] - lastStats[3]).coerceAtLeast(0) / elapsedSeconds).toLong()
                 lastStats = stats
                 lastSampleAt = now
+                val connected = _state.value == ConnectionState.CONNECTED
                 _speed.value = TunnelSpeed(
-                    downBytesPerSecond = if (_state.value == ConnectionState.CONNECTED) rxRate else 0L,
-                    upBytesPerSecond = if (_state.value == ConnectionState.CONNECTED) txRate else 0L,
+                    downBytesPerSecond = if (connected) rxRate else 0L,
+                    upBytesPerSecond = if (connected) txRate else 0L,
                 )
+                if (connected) {
+                    mergeSessionStats { current ->
+                        current.copy(
+                            downBytesTotal = current.downBytesTotal + rxRate,
+                            upBytesTotal = current.upBytesTotal + txRate,
+                        )
+                    }
+                }
                 if (_state.value != ConnectionState.CONNECTED) continue
                 updateNotification(
                     statusLabel,
@@ -1161,6 +1226,13 @@ class FoxyVpnService : VpnService() {
 
         private val _speed = MutableStateFlow(TunnelSpeed())
         val speed: StateFlow<TunnelSpeed> = _speed
+
+        private val _sessionStats = MutableStateFlow(SessionStats())
+        val sessionStats: StateFlow<SessionStats> = _sessionStats
+
+        fun mergeSessionStats(block: (SessionStats) -> SessionStats) {
+            _sessionStats.value = block(_sessionStats.value)
+        }
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, FoxyVpnService::class.java).setAction(ACTION_CONNECT))

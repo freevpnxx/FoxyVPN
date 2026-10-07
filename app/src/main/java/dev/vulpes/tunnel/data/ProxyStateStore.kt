@@ -46,6 +46,32 @@ class ProxyStateStore(context: Context) {
         return failures to false
     }
 
+    // --- favorites -----------------------------------------------------------
+    // Stored as "COUNTRY:CITY" so a favorite survives a server-list refresh. A bare country
+    // entry is stored as "COUNTRY:" and means "any city in this country".
+
+    private val _favoritesFlow = MutableStateFlow<Set<String>>(loadFavorites())
+    val favoritesFlow: StateFlow<Set<String>> = _favoritesFlow
+
+    private fun loadFavorites(): Set<String> =
+        prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
+
+    fun isFavorite(countryCode: String, cityCode: String): Boolean =
+        favoriteKey(countryCode, cityCode) in _favoritesFlow.value
+
+    fun toggleFavorite(countryCode: String, cityCode: String): Boolean {
+        val key = favoriteKey(countryCode, cityCode)
+        val next = _favoritesFlow.value.toMutableSet()
+        val added = if (key in next) {
+            next.remove(key); false
+        } else {
+            next.add(key); true
+        }
+        prefs.edit().putStringSet(KEY_FAVORITES, HashSet(next)).apply()
+        _favoritesFlow.value = next
+        return added
+    }
+
     fun clear() {
         prefs.edit().clear().apply()
         _selectedProxyFlow.value = null
@@ -58,6 +84,9 @@ class ProxyStateStore(context: Context) {
         private const val KEY_COUNTRY_NAME = "country_name"
         private const val KEY_CITY_CODE = "city_code"
         private const val KEY_FAILURES = "failures"
+        private const val KEY_FAVORITES = "favorites"
+
+        fun favoriteKey(countryCode: String, cityCode: String): String = "$countryCode:$cityCode"
         private const val FAILURE_THRESHOLD = 3
     }
 }
