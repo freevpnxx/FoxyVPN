@@ -57,6 +57,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
+/** Live tunnel throughput, sampled roughly once a second while connected. */
+data class TunnelSpeed(
+    val downBytesPerSecond: Long = 0L,
+    val upBytesPerSecond: Long = 0L,
+)
+
 private const val TAG = "FoxyVpnService"
 private const val CONNECT_TIMEOUT_MS = 20_000L
 private const val SERVER_LIST_FETCH_TIMEOUT_MS = 15_000L
@@ -1030,6 +1036,7 @@ class FoxyVpnService : VpnService() {
     private fun detachResources(): SessionResources {
         speedJob?.cancel()
         speedJob = null
+        _speed.value = TunnelSpeed()
 
         tokenRenewalJob?.cancel()
         tokenRenewalJob = null
@@ -1071,6 +1078,10 @@ class FoxyVpnService : VpnService() {
                 val rxRate = ((stats[3] - lastStats[3]).coerceAtLeast(0) / elapsedSeconds).toLong()
                 lastStats = stats
                 lastSampleAt = now
+                _speed.value = TunnelSpeed(
+                    downBytesPerSecond = if (_state.value == ConnectionState.CONNECTED) rxRate else 0L,
+                    upBytesPerSecond = if (_state.value == ConnectionState.CONNECTED) txRate else 0L,
+                )
                 if (_state.value != ConnectionState.CONNECTED) continue
                 updateNotification(
                     statusLabel,
@@ -1147,6 +1158,9 @@ class FoxyVpnService : VpnService() {
 
         private val _lastError = MutableStateFlow<String?>(null)
         val lastError: StateFlow<String?> = _lastError
+
+        private val _speed = MutableStateFlow(TunnelSpeed())
+        val speed: StateFlow<TunnelSpeed> = _speed
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, FoxyVpnService::class.java).setAction(ACTION_CONNECT))
