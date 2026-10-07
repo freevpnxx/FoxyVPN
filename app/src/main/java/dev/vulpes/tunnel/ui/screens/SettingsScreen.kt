@@ -72,7 +72,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val notSetLabel = stringResource(R.string.value_not_set)
     val noneLabel = stringResource(R.string.value_none)
-    val dohLabel = dohProvider.labelRes?.let { stringResource(it) } ?: dohProvider.label
     var exitCheckEnabled by remember { mutableStateOf(settingsStore.exitCheckEnabled) }
     var killSwitchEnabled by remember { mutableStateOf(settingsStore.killSwitchEnabled) }
     val batteryUnrestricted = remember {
@@ -80,6 +79,7 @@ fun SettingsScreen(
             ?.isIgnoringBatteryOptimizations(context.packageName) == true
     }
     var dohProvider by remember { mutableStateOf(settingsStore.dohProvider) }
+    val dohLabel = dohProvider.labelRes?.let { stringResource(it) } ?: dohProvider.label
     var customDnsEnabled by remember { mutableStateOf(settingsStore.customDnsEnabled) }
     var customDnsServer by remember { mutableStateOf(settingsStore.customDnsServer) }
     var socksBindAddress by remember { mutableStateOf(settingsStore.socksBindAddress) }

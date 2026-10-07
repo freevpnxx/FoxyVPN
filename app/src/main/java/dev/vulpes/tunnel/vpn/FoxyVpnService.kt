@@ -619,7 +619,7 @@ class FoxyVpnService : VpnService() {
                         "local proxy at $socksBindAddress:$socksPort",
                 )
             } else {
-                val fd = establishTun(excludedApps, customDnsServer, settingsStore.killSwitchEnabled)
+                val fd = establishTun(excludedApps, customDnsServer)
                     ?: error("Failed to establish TUN interface")
                 tunFd = fd
                 tunnelInterfaceActive = true
@@ -1039,7 +1039,6 @@ class FoxyVpnService : VpnService() {
     private fun establishTun(
         excludedApps: Set<String>,
         customDnsServer: String?,
-        killSwitch: Boolean,
     ): ParcelFileDescriptor? {
         val dnsServer = customDnsServer ?: HevSocks5TunnelConfig.MAPDNS_ADDRESS
         if (customDnsServer != null) {
@@ -1077,8 +1076,6 @@ class FoxyVpnService : VpnService() {
                 }
             }
             .addDnsServer(dnsServer)
-            // Without a kill switch Android lets apps route around the VPN entirely.
-            .setAllowBypass(!killSwitch)
             .setMtu(HevSocks5TunnelConfig.TUN_MTU)
             .setBlocking(true)
             .apply {
