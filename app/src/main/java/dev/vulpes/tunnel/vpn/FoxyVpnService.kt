@@ -679,7 +679,7 @@ class FoxyVpnService : VpnService() {
                 if (pass.quotaMax == null && pass.quotaRemaining == null) {
                     AppLogger.d(TAG, "proxy pass carried no quota headers; the allowance stays unknown")
                 }
-                pass
+                return pass
             }
 
             var currentPassExpiry: Long? = null
