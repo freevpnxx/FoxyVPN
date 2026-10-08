@@ -16,9 +16,6 @@
     <string name="value_not_set">تنظیم نشده</string>
 
     <!-- وضعیت اتصال -->
-    <string name="state_connected">متصل</string>
-    <string name="state_connecting">در حال اتصال…</string>
-    <string name="state_disconnected">قطع</string>
     <string name="state_connected_subtitle">همه‌ی ترافیک از تونل عبور می‌کند</string>
     <string name="state_connecting_subtitle">برای لغو لمس کنید</string>
     <string name="state_disconnected_subtitle">برای شروع تونل، حلقه را لمس کنید</string>
@@ -56,7 +53,6 @@
     <string name="quota_unavailable_subtitle">سرور سهمیه‌ای گزارش نکرد</string>
 
     <!-- کارت مکان در خانه -->
-    <string name="home_servers">سرورها</string>
     <string name="home_server_host">سرور  •  %1$s</string>
     <string name="home_servers_default">پیشنهادی</string>
     <string name="home_servers_default_subtitle">سریع‌ترین سرور در دسترس</string>

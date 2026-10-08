@@ -74,7 +74,7 @@ fun rememberTickingElapsed(startedAtElapsedMs: Long?, active: Boolean): Long {
  * downloads instead of sitting at its stale connect-time value.
  */
 @Composable
-fun QuotaCard(
+fun QuotaSection(
     stats: SessionStats,
     accent: Color,
     modifier: Modifier = Modifier,
@@ -110,7 +110,7 @@ fun QuotaCard(
         }
     }
 
-    GlassCard(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -290,20 +290,13 @@ private fun SessionCell(
  * tick from a single place.
  */
 @Composable
-fun SessionStrip(
+fun SessionSection(
     stats: SessionStats,
     elapsedMs: Long,
     accent: Color,
     modifier: Modifier = Modifier,
 ) {
-    GlassCard(modifier = modifier.fillMaxWidth()) {
-        Text(
-            stringResource(R.string.session_section),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(12.dp))
-
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,

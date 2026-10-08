@@ -1,5 +1,6 @@
 package dev.vulpes.tunnel.ui.screens
 
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.border
 import java.util.Locale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -71,8 +72,8 @@ import dev.vulpes.tunnel.data.model.ConnectionState
 import dev.vulpes.tunnel.ui.components.AuroraBackdrop
 import dev.vulpes.tunnel.ui.components.GlassCard
 import dev.vulpes.tunnel.ui.components.PowerOrb
-import dev.vulpes.tunnel.ui.components.QuotaCard
-import dev.vulpes.tunnel.ui.components.SessionStrip
+import dev.vulpes.tunnel.ui.components.QuotaSection
+import dev.vulpes.tunnel.ui.components.SessionSection
 import dev.vulpes.tunnel.ui.components.rememberTickingElapsed
 import dev.vulpes.tunnel.ui.theme.LocalFoxyStatusColors
 import dev.vulpes.tunnel.ui.theme.ThemeController
@@ -236,21 +237,9 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(Modifier.height(18.dp))
-
-                Text(
-                    text = when (state) {
-                        ConnectionState.CONNECTED -> stringResource(R.string.state_connected)
-                        ConnectionState.CONNECTING -> stringResource(R.string.state_connecting)
-                        ConnectionState.DISCONNECTED -> stringResource(R.string.state_disconnected)
-                    },
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-
                 val error = lastError
                 if (error != null && state != ConnectionState.CONNECTING) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(14.dp))
                     Text(
                         error,
                         style = MaterialTheme.typography.bodySmall,
@@ -258,130 +247,150 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(26.dp))
 
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onOpenServers,
+                // One dashboard card instead of three stacked ones: the server row on top, then
+                // the session metrics and the remaining allowance behind dividers.
+                AnimatedVisibility(
+                    visible = entered,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
                 ) {
-                    Text(
-                        stringResource(R.string.home_servers),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val flag = selectedProxy?.let { flagFor(it.countryCode) }.orEmpty()
-                        if (flag.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(accent.copy(alpha = 0.10f))
-                                    .border(
-                                        1.dp,
-                                        accent.copy(alpha = 0.22f),
-                                        RoundedCornerShape(14.dp),
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(flag, fontSize = 24.sp)
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(accent.copy(alpha = 0.16f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Public,
-                                    contentDescription = null,
-                                    tint = accent,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            // The server list hands back English country names; render them in the
-                            // app's own language instead so the card actually translates.
-                            val countryLabel = selectedProxy?.let { proxy ->
-                                val code = proxy.countryCode.trim().uppercase()
-                                if (code.length == 2) {
-                                    Locale("", code).getDisplayCountry(uiLocale)
-                                        .ifBlank { proxy.countryName.ifBlank { code } }
-                                } else {
-                                    proxy.countryName.ifBlank { proxy.countryCode }
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable(onClick = onOpenServers)
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val flag = selectedProxy?.let { flagFor(it.countryCode) }.orEmpty()
+                            if (flag.isNotEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(RoundedCornerShape(15.dp))
+                                        .background(accent.copy(alpha = 0.10f))
+                                        .border(
+                                            1.dp,
+                                            accent.copy(alpha = 0.22f),
+                                            RoundedCornerShape(15.dp),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(flag, fontSize = 25.sp)
                                 }
-                            } ?: stringResource(R.string.home_servers_default)
-                            Text(
-                                countryLabel,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                selectedProxy?.let { proxy ->
-                                    stringResource(R.string.home_server_host, proxy.host)
-                                } ?: stringResource(R.string.home_servers_default_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        val ping = serverPingMs
-                        if (ping != null) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(percent = 50))
-                                    .background(accent.copy(alpha = 0.14f))
-                                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                            ) {
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(RoundedCornerShape(15.dp))
+                                        .background(accent.copy(alpha = 0.14f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Public,
+                                        contentDescription = null,
+                                        tint = accent,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                // The server list reports English country names; render them in
+                                // the app's own language so the card actually translates.
+                                val countryLabel = selectedProxy?.let { proxy ->
+                                    val code = proxy.countryCode.trim().uppercase()
+                                    if (code.length == 2) {
+                                        Locale("", code).getDisplayCountry(uiLocale)
+                                            .ifBlank { proxy.countryName.ifBlank { code } }
+                                    } else {
+                                        proxy.countryName.ifBlank { proxy.countryCode }
+                                    }
+                                } ?: stringResource(R.string.home_servers_default)
                                 Text(
-                                    stringResource(R.string.locations_latency_value, ping),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = accent,
+                                    countryLabel,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    selectedProxy?.let { proxy ->
+                                        stringResource(R.string.home_server_host, proxy.host)
+                                    } ?: stringResource(R.string.home_servers_default_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
+                            val ping = serverPingMs
+                            if (ping != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(percent = 50))
+                                        .background(accent.copy(alpha = 0.14f))
+                                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                                ) {
+                                    Text(
+                                        stringResource(R.string.locations_latency_value, ping),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = accent,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        Spacer(Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+
+                        if (state == ConnectionState.CONNECTED) {
+                            Spacer(Modifier.height(16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            SessionSection(stats = session, elapsedMs = elapsedMs, accent = accent)
+                            Spacer(Modifier.height(18.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            QuotaSection(stats = session, accent = accent)
+                        }
                     }
                 }
 
-                AnimatedVisibility(
-                    visible = state == ConnectionState.CONNECTED,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
-                ) {
-                    Column {
-                        Spacer(Modifier.height(18.dp))
-                        SessionStrip(stats = session, elapsedMs = elapsedMs, accent = accent)
-                        Spacer(Modifier.height(12.dp))
-                        QuotaCard(stats = session, accent = accent)
-                    }
-                }
+                // Keep the last card clear of the corner button.
+                Spacer(Modifier.height(96.dp))
+            }
 
-
-                Spacer(Modifier.height(12.dp))
-
-                IconButton(onClick = onOpenLogs) {
-                    Icon(
-                        imageVector = Icons.Filled.Code,
-                        contentDescription = stringResource(R.string.settings_view_logs),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Corner-anchored. BottomEnd follows the layout direction, so this lands bottom-right
+            // in English and bottom-left in Persian with no special casing.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        CircleShape,
                     )
-                }
-
-                Spacer(Modifier.height(28.dp))
+                    .clickable(onClick = onOpenLogs),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Code,
+                    contentDescription = stringResource(R.string.settings_view_logs),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
             }
         }
     }
