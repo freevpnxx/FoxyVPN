@@ -24,4 +24,29 @@ object PingUtil {
             }.getOrNull()
         }
     }
+
+    /**
+     * @param latencyMs median of the successful samples, so a single outlier cannot dominate.
+     * @param jitterMs mean deviation between consecutive samples; lower means steadier.
+     */
+    data class Sample(val latencyMs: Int, val jitterMs: Int, val samples: Int)
+
+    /**
+     * Probes the server several times and reports both latency and jitter. Returns null only when
+     * every round failed, so a flaky probe does not hide an otherwise reachable server.
+     */
+    suspend fun sample(host: String, port: Int, rounds: Int = 3): Sample? {
+        val readings = (1..rounds).mapNotNull { measureTcpLatencyMs(host, port) }
+        if (readings.isEmpty()) return null
+
+        val sorted = readings.sorted()
+        val median = sorted[sorted.size / 2]
+
+        val jitter = if (readings.size > 1) {
+            readings.zipWithNext { a, b -> kotlin.math.abs(a - b) }.average().toInt()
+        } else {
+            0
+        }
+        return Sample(latencyMs = median, jitterMs = jitter, samples = readings.size)
+    }
 }

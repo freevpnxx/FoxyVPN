@@ -1,5 +1,8 @@
 package dev.vulpes.tunnel.ui.navigation
 
+import dev.vulpes.tunnel.vpn.FoxyVpnService
+import dev.vulpes.tunnel.data.model.ConnectionState
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -64,10 +67,18 @@ fun FoxyNavGraph(
             )
         }
         composable(FoxyRoutes.SERVERS) {
+            val context = LocalContext.current
             ServerListScreen(
                 serverListClient = app.serverListClient,
                 proxyStateStore = app.proxyStateStore,
-                onServerSelected = { navController.popBackStack() },
+                // Selecting a server while a tunnel is live must swap the connection over
+                // immediately; otherwise the new choice only takes effect on the next connect.
+                onServerSelected = {
+                    if (FoxyVpnService.state.value != ConnectionState.DISCONNECTED) {
+                        FoxyVpnService.switchServer(context)
+                    }
+                    navController.popBackStack()
+                },
                 onBack = { navController.popBackStack() },
             )
         }

@@ -30,9 +30,14 @@ class SettingsStore(context: Context) {
         } ?: ThemeMode.SYSTEM
         set(value) { prefs.edit().putString(KEY_THEME_MODE, value.name).apply() }
 
+    /** One of [LocaleManager.SUPPORTED]. Anything else is treated as "follow the system". */
+    var appLanguage: String
+        get() = prefs.getString(KEY_LANGUAGE, LocaleManager.SYSTEM) ?: LocaleManager.SYSTEM
+        set(value) { prefs.edit().putString(KEY_LANGUAGE, value).apply() }
+
     /**
-     * When on, traffic is blocked rather than leaked if the tunnel drops, and apps are not
-     * permitted to bypass the VPN interface.
+     * When on, traffic is blocked rather than leaked if the tunnel drops. Apps are never allowed
+     * to bypass the VPN interface either way, because `allowBypass()` is not called.
      */
     var killSwitchEnabled: Boolean
         get() = prefs.getBoolean(KEY_KILL_SWITCH, false)
@@ -147,6 +152,7 @@ class SettingsStore(context: Context) {
 
     companion object {
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_LANGUAGE = "app_language"
         private const val KEY_KILL_SWITCH = "kill_switch_enabled"
         private const val KEY_EXIT_CHECK = "exit_check_enabled"
         private const val KEY_SOCKS_BIND_ADDRESS = "socks_bind_address"

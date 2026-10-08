@@ -1,5 +1,6 @@
 package dev.vulpes.tunnel
 
+import dev.vulpes.tunnel.data.LocaleManager
 import io.netty.util.ResourceLeakDetector
 import android.app.Application
 import android.app.NotificationChannel
@@ -18,6 +19,12 @@ import org.conscrypt.Conscrypt
 import java.security.Security
 
 class FoxyVpnApp : Application() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(
+            LocaleManager.wrap(newBase, SettingsStore(newBase).appLanguage),
+        )
+    }
 
     lateinit var tokenStore: TokenStore
     lateinit var proxyStateStore: ProxyStateStore

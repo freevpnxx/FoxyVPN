@@ -47,8 +47,11 @@ android {
         applicationId = "dev.vulpes.tunnel"
         minSdk = 26
         targetSdk = 35
-        versionCode = 47
-        versionName = "1.5.1"
+        // Ship only the two locales the app translates; AndroidX and Material carry ~80 more.
+        resourceConfigurations += listOf("en", "fa")
+
+        versionCode = 48
+        versionName = "1.6.0"
 
         externalNativeBuild {
             ndkBuild {
@@ -81,8 +84,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The APK published on GitHub Releases is the debug one, because no signing key is
+            // committed to a public repo. Left unminified it ships every icon in
+            // material-icons-extended and every locale in AndroidX, which is most of its 30 MB.
+            // The JNI entry point, Netty and Conscrypt are all kept by proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
             if (hasReleaseSigning) {

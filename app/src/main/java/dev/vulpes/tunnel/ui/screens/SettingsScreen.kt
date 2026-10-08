@@ -1,5 +1,7 @@
 package dev.vulpes.tunnel.ui.screens
 
+import dev.vulpes.tunnel.data.LocaleManager
+import android.app.Activity
 import android.content.Context
 import android.provider.Settings
 import android.os.PowerManager
@@ -74,6 +76,8 @@ fun SettingsScreen(
     val noneLabel = stringResource(R.string.value_none)
     var exitCheckEnabled by remember { mutableStateOf(settingsStore.exitCheckEnabled) }
     var killSwitchEnabled by remember { mutableStateOf(settingsStore.killSwitchEnabled) }
+    var appLanguage by remember { mutableStateOf(settingsStore.appLanguage) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     val batteryUnrestricted = remember {
         (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
             ?.isIgnoringBatteryOptimizations(context.packageName) == true
@@ -103,6 +107,22 @@ fun SettingsScreen(
     var showUpstreamProxyCredentialsDialog by remember { mutableStateOf(false) }
     var showSplitTunnelDialog by remember { mutableStateOf(false) }
 
+    if (showLanguageDialog) {
+        LanguagePickerDialog(
+            current = appLanguage,
+            onDismiss = { showLanguageDialog = false },
+            onConfirm = { picked ->
+                showLanguageDialog = false
+                if (picked != appLanguage) {
+                    appLanguage = picked
+                    settingsStore.appLanguage = picked
+                    // The whole tree has to be rebuilt so every string re-resolves, and the
+                    // layout direction flips when switching to Persian.
+                    (context as? Activity)?.recreate()
+                }
+            },
+        )
+    }
     if (showDohProviderDialog) {
         DohProviderPickerDialog(
             current = dohProvider,
@@ -227,6 +247,15 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            SectionLabel(stringResource(R.string.settings_section_appearance))
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_language)) },
+                supportingContent = { Text(languageLabel(appLanguage)) },
+                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                modifier = Modifier.clickable { showLanguageDialog = true },
+            )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionLabel(stringResource(R.string.settings_section_connection))
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_verify_exit)) },
@@ -881,6 +910,49 @@ private fun SplitTunnelDialog(
             TextButton(onClick = { onConfirm(selected) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun languageLabel(tag: String): String = when (tag) {
+    LocaleManager.ENGLISH -> stringResource(R.string.lang_en)
+    LocaleManager.PERSIAN -> stringResource(R.string.lang_fa)
+    else -> stringResource(R.string.lang_system)
+}
+
+@Composable
+private fun LanguagePickerDialog(
+    current: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val options = listOf(
+        LocaleManager.SYSTEM to stringResource(R.string.lang_system),
+        LocaleManager.ENGLISH to stringResource(R.string.lang_en),
+        LocaleManager.PERSIAN to stringResource(R.string.lang_fa),
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_language)) },
+        text = {
+            Column {
+                options.forEach { (tag, label) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onConfirm(tag) }
+                            .padding(vertical = 10.dp),
+                    ) {
+                        RadioButton(selected = tag == current, onClick = { onConfirm(tag) })
+                        Text(label, modifier = Modifier.padding(start = 12.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )

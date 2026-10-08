@@ -1,5 +1,7 @@
 package dev.vulpes.tunnel
 
+import dev.vulpes.tunnel.data.LocaleManager
+import dev.vulpes.tunnel.data.SettingsStore
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.VpnService
@@ -21,6 +23,10 @@ import dev.vulpes.tunnel.vpn.FoxyVpnService
 
 class MainActivity : ComponentActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(LocaleManager.wrap(newBase, SettingsStore(newBase).appLanguage))
+    }
+
     private val vpnPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -28,12 +34,7 @@ class MainActivity : ComponentActivity() {
             FoxyVpnService.start(this)
         } else {
 
-            Toast.makeText(
-                this,
-                "FoxyVPN needs Android's VPN permission to tunnel this device's traffic. " +
-                    "Proxy-only mode in Settings works without it.",
-                Toast.LENGTH_LONG,
-            ).show()
+            Toast.makeText(this, getString(R.string.err_vpn_permission), Toast.LENGTH_LONG).show()
         }
     }
 

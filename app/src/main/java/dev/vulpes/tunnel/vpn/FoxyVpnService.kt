@@ -1,5 +1,6 @@
 package dev.vulpes.tunnel.vpn
 
+import dev.vulpes.tunnel.data.LocaleManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -149,6 +150,10 @@ private fun proxyPassRenewalDelayMs(expiresAtEpochSeconds: Long?): Long {
 }
 
 class FoxyVpnService : VpnService() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(LocaleManager.wrap(newBase, SettingsStore(newBase).appLanguage))
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -353,8 +358,44 @@ class FoxyVpnService : VpnService() {
             return START_STICKY
         } else if (action == ACTION_DISCONNECT) {
             requestDisconnect("requested by the user")
+        } else if (action == ACTION_SWITCH) {
+            requestSwitch()
         }
         return START_NOT_STICKY
+    }
+
+    /**
+     * The user picked a different server while a tunnel was live. Tear the current session down
+     * and dial the new selection, staying in the foreground the whole time so the connection
+     * swaps in place instead of dropping and needing a second tap.
+     */
+    private fun requestSwitch() {
+        if (_state.value == ConnectionState.DISCONNECTED) {
+            AppLogger.d(TAG, "switch ignored; nothing is connected")
+            return
+        }
+        AppLogger.i(TAG, "switch: redialing to the newly selected server")
+
+        ++connectionGeneration
+        connectJob?.cancel()
+        connectJob = null
+        watchdogJob?.cancel()
+        watchdogJob = null
+
+        _state.value = ConnectionState.CONNECTING
+        _lastError.value = null
+        statusLabel = getString(R.string.notif_connecting)
+        enterForeground(statusLabel)
+
+        val doomed = detachResources()
+        acquireWakeLocks()
+
+        connectJob = scope.launch {
+            opMutex.withLock {
+                releaseResources(doomed, stopNativeTunnel = true)
+                connect()
+            }
+        }
     }
 
     private fun requestDisconnect(reason: String) {
@@ -1230,6 +1271,7 @@ class FoxyVpnService : VpnService() {
     companion object {
         const val ACTION_CONNECT = "dev.vulpes.tunnel.action.CONNECT"
         const val ACTION_DISCONNECT = "dev.vulpes.tunnel.action.DISCONNECT"
+        const val ACTION_SWITCH = "dev.vulpes.tunnel.action.SWITCH"
         private const val NOTIFICATION_ID = 1
         private const val REQUEST_CODE_OPEN = 0
         private const val REQUEST_CODE_DISCONNECT = 1
@@ -1252,6 +1294,17 @@ class FoxyVpnService : VpnService() {
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, FoxyVpnService::class.java).setAction(ACTION_CONNECT))
+        }
+
+        /** Swap the live tunnel over to whatever server is currently selected. */
+        fun switchServer(context: Context) {
+            runCatching {
+                context.startService(
+                    Intent(context, FoxyVpnService::class.java).setAction(ACTION_SWITCH),
+                )
+            }.onFailure {
+                AppLogger.w(TAG, "could not deliver the switch intent; the service is not running", it)
+            }
         }
 
         fun stop(context: Context) {

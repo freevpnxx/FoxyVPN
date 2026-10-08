@@ -1,5 +1,8 @@
 package dev.vulpes.tunnel.ui.components
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -25,8 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Power
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -153,10 +154,12 @@ fun AuroraBackdrop(
 }
 
 /**
- * The connect/disconnect control: a pulsing halo, a state-driven arc, and a spring-loaded press.
+ * The connect/disconnect control.
  *
- * DISCONNECTED shows only the track. CONNECTING runs a comet arc around the ring. CONNECTED closes
- * the ring and adds a slow breathing halo, so the state reads without looking at the label.
+ * The power glyph is drawn by hand rather than taken from the icon set so it can animate: the ring
+ * draws itself on while connecting and the stem grows into place, then three motes orbit the rim
+ * once the tunnel is live. DISCONNECTED shows only the track, so the state reads at a glance
+ * without relying on the label underneath.
  */
 @Composable
 fun PowerOrb(
@@ -164,6 +167,8 @@ fun PowerOrb(
     accent: Color,
     modifier: Modifier = Modifier,
     size: Dp = 196.dp,
+    connectLabel: String,
+    disconnectLabel: String,
     onToggle: () -> Unit,
 ) {
     val transition = rememberInfiniteTransition(label = "orb")
@@ -178,6 +183,13 @@ fun PowerOrb(
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(2_400, easing = LinearEasing)),
         label = "orb-pulse",
+    )
+
+    // One shared driver for the "draw the glyph on" effect.
+    val drawOn by animateFloatAsState(
+        targetValue = if (state == ConnectionState.DISCONNECTED) 0f else 1f,
+        animationSpec = tween(if (state == ConnectionState.CONNECTING) 700 else 420),
+        label = "orb-drawon",
     )
 
     var pressed by remember { mutableStateOf(false) }
@@ -210,6 +222,13 @@ fun PowerOrb(
                     },
                     onTap = { onToggle() },
                 )
+            }
+            .semantics {
+                contentDescription = if (connected) disconnectLabel else connectLabel
+                onClick(label = if (connected) disconnectLabel else connectLabel) {
+                    onToggle()
+                    true
+                }
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -219,6 +238,7 @@ fun PowerOrb(
             val topLeft = Offset(inset, inset)
             val half = this.size.minDimension / 2f
 
+            // Breathing halo.
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(accent.copy(alpha = haloAlpha), Color.Transparent),
@@ -229,6 +249,7 @@ fun PowerOrb(
                 center = center,
             )
 
+            // Idle track.
             drawArc(
                 color = accent.copy(alpha = 0.13f),
                 startAngle = 0f,
@@ -240,25 +261,45 @@ fun PowerOrb(
             )
 
             when (state) {
-                ConnectionState.CONNECTING -> drawArc(
-                    color = accent,
-                    startAngle = sweep,
-                    sweepAngle = 100f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = trackWidth, cap = StrokeCap.Round),
-                )
+                ConnectionState.CONNECTING -> {
+                    // A comet with a fading tail rather than a flat arc.
+                    for (segment in 0 until 5) {
+                        drawArc(
+                            color = accent.copy(alpha = 0.85f - segment * 0.16f),
+                            startAngle = sweep - segment * 20f,
+                            sweepAngle = 20f,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(width = trackWidth, cap = StrokeCap.Round),
+                        )
+                    }
+                }
 
-                ConnectionState.CONNECTED -> drawArc(
-                    color = accent,
-                    startAngle = -90f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = trackWidth, cap = StrokeCap.Round),
-                )
+                ConnectionState.CONNECTED -> {
+                    drawArc(
+                        color = accent,
+                        startAngle = -90f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = trackWidth, cap = StrokeCap.Round),
+                    )
+                    // Three motes orbiting the rim, evenly spaced.
+                    val orbit = this.size.minDimension / 2f - trackWidth / 2f
+                    for (i in 0 until 3) {
+                        val angle = Math.toRadians((sweep / 2f + i * 120f).toDouble())
+                        drawCircle(
+                            color = accent.copy(alpha = 0.55f + 0.35f * pulse),
+                            radius = trackWidth * 0.30f,
+                            center = Offset(
+                                x = center.x + (orbit * kotlin.math.cos(angle)).toFloat(),
+                                y = center.y + (orbit * kotlin.math.sin(angle)).toFloat(),
+                            ),
+                        )
+                    }
+                }
 
                 ConnectionState.DISCONNECTED -> Unit
             }
@@ -278,13 +319,60 @@ fun PowerOrb(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Filled.Power,
-                contentDescription = if (state == ConnectionState.DISCONNECTED) "Connect" else "Disconnect",
-                tint = accent,
-                modifier = Modifier.size(size * 0.25f),
+            PowerGlyph(
+                accent = accent,
+                progress = drawOn,
+                dim = !connected,
+                size = size * 0.25f,
             )
         }
+    }
+}
+
+/**
+ * The standard power symbol: a ring open at the top with a stem through the gap.
+ *
+ * @param progress 0 draws nothing, 1 draws the full glyph. Used for the draw-on effect.
+ */
+@Composable
+private fun PowerGlyph(
+    accent: Color,
+    progress: Float,
+    dim: Boolean,
+    size: Dp,
+) {
+    val gapDegrees = 62f
+    val stemStroke = with(LocalDensity.current) { 7.dp.toPx() }
+
+    Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        // The ring occupies the lower ~72% so the stem has room to stand proud of it.
+        val ringDiameter = w * 0.78f
+        val ringLeft = (w - ringDiameter) / 2f
+        val ringTop = h - ringDiameter
+        val ringSize = Size(ringDiameter, ringDiameter)
+
+        val ringSweep = (360f - gapDegrees) * progress
+        drawArc(
+            color = accent.copy(alpha = if (dim) 0.55f else 1f),
+            startAngle = -90f + gapDegrees / 2f,
+            sweepAngle = ringSweep,
+            useCenter = false,
+            topLeft = Offset(ringLeft, ringTop),
+            size = ringSize,
+            style = Stroke(width = stemStroke, cap = StrokeCap.Round),
+        )
+
+        val stemBottom = ringTop + ringDiameter * 0.42f
+        val stemTop = stemBottom - (ringDiameter * 0.52f) * progress
+        drawLine(
+            color = accent.copy(alpha = if (dim) 0.55f else 1f),
+            start = Offset(w / 2f, stemBottom),
+            end = Offset(w / 2f, stemTop),
+            strokeWidth = stemStroke,
+            cap = StrokeCap.Round,
+        )
     }
 }
 

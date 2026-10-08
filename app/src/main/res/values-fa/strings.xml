@@ -76,6 +76,10 @@
     <string name="locations_latency_unavailable">ناموفق</string>
     <string name="locations_servers_count">%1$d سرور</string>
     <string name="locations_one_server">۱ سرور</string>
+        <string name="locations_refresh">نوسازی و پینگ مجدد سرورها</string>
+    <string name="locations_sort_ping">مرتب‌سازی بر اساس تأخیر</string>
+    <string name="locations_sort_name">مرتب‌سازی بر اساس نام</string>
+    <string name="locations_jitter">±%1$d ms</string>
     <string name="locations_limited">%1$d در دسترس نیست</string>
     <string name="locations_no_servers">سروری در دسترس نیست</string>
     <string name="locations_none_for_city">سروری در %1$s در دسترس نیست</string>
@@ -131,6 +135,13 @@
     <string name="settings_section_local_proxy">پروکسی محلی</string>
     <string name="settings_section_split">تونل تفکیک‌شده</string>
     <string name="settings_section_advanced">پیشرفته</string>
+        <string name="settings_language">زبان</string>
+    <string name="settings_language_desc">انگلیسی یا فارسی</string>
+    <string name="lang_system">پیروی از سیستم</string>
+    <string name="lang_en">English</string>
+    <string name="lang_fa">فارسی</string>
+    <string name="settings_section_appearance">ظاهر</string>
+    <string name="err_vpn_permission">فاکسی‌وی‌پی‌ان برای تونل کردن ترافیک این دستگاه به اجازه VPN اندروید نیاز دارد. حالت «فقط پروکسی» در تنظیمات بدون آن کار می‌کند.</string>
     <string name="settings_section_reliability">پایداری اتصال</string>
     <string name="settings_section_about">درباره</string>
     <string name="settings_section_account">حساب کاربری</string>

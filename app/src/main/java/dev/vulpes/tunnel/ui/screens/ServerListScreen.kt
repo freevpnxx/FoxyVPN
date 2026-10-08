@@ -27,6 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -76,6 +78,8 @@ private sealed class LocationRow {
 
 private enum class PingState { PENDING, DONE, FAILED }
 
+private enum class SortMode { NAME, PING }
+
 private const val FASTEST_LIMIT = 5
 
 /** ISO 3166-1 alpha-2 to a flag emoji via regional indicator symbols. No image assets needed. */
@@ -104,8 +108,12 @@ fun ServerListScreen(
     val selected by proxyStateStore.selectedProxyFlow.collectAsState()
     val favorites by proxyStateStore.favoritesFlow.collectAsState()
 
-    val pingResults = remember { mutableStateMapOf<String, Int>() }
+    val pingResults = remember { mutableStateMapOf<String, PingUtil.Sample>() }
     val pingStates = remember { mutableStateMapOf<String, PingState>() }
+    // Bumping this re-runs every probe, which is what the refresh button does.
+    var pingEpoch by remember { mutableStateOf(0) }
+    var sortMode by remember { mutableStateOf(SortMode.NAME) }
+    val isRefreshing = pingStates.values.any { it == PingState.PENDING }
 
     val keyboard = LocalSoftwareKeyboardController.current
 
@@ -157,6 +165,20 @@ fun ServerListScreen(
         }
     }
 
+    val orderedCountries = remember(filtered, sortMode, pingResults.toMap()) {
+        if (sortMode != SortMode.PING) {
+            filtered
+        } else {
+            filtered.map { country ->
+                country.copy(
+                    cities = country.cities.sortedBy { city ->
+                        pingResults["${country.code}:${city.code}"]?.latencyMs ?: Int.MAX_VALUE
+                    },
+                )
+            }
+        }
+    }
+
     val favoriteKeys = favorites
     val favoriteCities = remember(countries, favoriteKeys) {
         favoriteKeys.mapNotNull { key ->
@@ -171,9 +193,9 @@ fun ServerListScreen(
 
     val fastest = remember(pingResults.toMap(), countries) {
         pingResults.entries
-            .sortedBy { it.value }
+            .sortedBy { it.value.latencyMs }
             .take(FASTEST_LIMIT)
-            .mapNotNull { (key, latency) ->
+            .mapNotNull { (key, sample) ->
                 val parts = key.split(":", limit = 2)
                 val country = countries.firstOrNull { it.code == parts.getOrNull(0) }
                     ?: return@mapNotNull null
@@ -182,7 +204,7 @@ fun ServerListScreen(
             }
     }
 
-    val rows = remember(filtered, searchActive, favoriteCities, fastest, recommendedCountry) {
+    val rows = remember(orderedCountries, searchActive, favoriteCities, fastest, recommendedCountry) {
         buildList {
             if (!searchActive) {
                 if (recommendedCountry != null) add(LocationRow.Recommended)
@@ -201,12 +223,12 @@ fun ServerListScreen(
                     }
                 }
 
-                if (filtered.isNotEmpty()) {
+                if (orderedCountries.isNotEmpty()) {
                     add(LocationRow.Section(title = "all", key = "section-all"))
                 }
             }
 
-            for (country in filtered) {
+            for (country in orderedCountries) {
                 add(LocationRow.Country(country))
                 country.cities.indices.forEach { index ->
                     add(LocationRow.City(country, index, showCountry = false))
@@ -215,7 +237,7 @@ fun ServerListScreen(
         }
     }
 
-    val totalLocations = remember(filtered) { filtered.sumOf { it.cities.size } }
+    val totalLocations = remember(orderedCountries) { orderedCountries.sumOf { it.cities.size } }
 
     Scaffold(
         topBar = {
@@ -237,6 +259,36 @@ fun ServerListScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        sortMode = if (sortMode == SortMode.NAME) SortMode.PING else SortMode.NAME
+                    }) {
+                        Icon(
+                            Icons.Default.SwapVert,
+                            contentDescription = stringResource(
+                                if (sortMode == SortMode.PING) {
+                                    R.string.locations_sort_name
+                                } else {
+                                    R.string.locations_sort_ping
+                                },
+                            ),
+                            tint = if (sortMode == SortMode.PING) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                    IconButton(
+                        onClick = { pingEpoch++ },
+                        enabled = !isRefreshing,
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.locations_refresh),
                         )
                     }
                 },
@@ -332,11 +384,13 @@ fun ServerListScreen(
                                 is LocationRow.City -> {
                                     val city = row.country.cities[row.cityIndex]
                                     val pingKey = "${row.country.code}:${city.code}"
-                                    val pingMs = pingResults[pingKey]
+                                    val pingSample = pingResults[pingKey]
                                     val pingState = pingStates[pingKey] ?: PingState.PENDING
 
-                                    LaunchedEffect(pingKey) {
-                                        if (pingStates.containsKey(pingKey)) return@LaunchedEffect
+                                    LaunchedEffect(pingKey, pingEpoch) {
+                                        if (pingEpoch == 0 && pingStates.containsKey(pingKey)) {
+                                            return@LaunchedEffect
+                                        }
                                         pingStates[pingKey] = PingState.PENDING
                                         val target = city.servers.firstOrNull { !it.quarantined }
                                             ?.let { ServerListClient.defaultConnectTarget(it) }
@@ -344,11 +398,12 @@ fun ServerListScreen(
                                             pingStates[pingKey] = PingState.FAILED
                                             return@LaunchedEffect
                                         }
-                                        val result = PingUtil.measureTcpLatencyMs(target.first, target.second)
+                                        val result = PingUtil.sample(target.first, target.second)
                                         if (result != null) {
                                             pingResults[pingKey] = result
                                             pingStates[pingKey] = PingState.DONE
                                         } else {
+                                            pingResults.remove(pingKey)
                                             pingStates[pingKey] = PingState.FAILED
                                         }
                                     }
@@ -367,7 +422,8 @@ fun ServerListScreen(
                                         },
                                         serverCount = city.servers.count { !it.quarantined },
                                         quarantinedCount = city.servers.count { it.quarantined },
-                                        pingMs = pingMs,
+                                        pingMs = pingSample?.latencyMs,
+                                        jitterMs = pingSample?.jitterMs,
                                         pingState = pingState,
                                         isFavorite = isFavorite,
                                         isSelected = isSelected,
@@ -569,6 +625,11 @@ private fun CityRow(
                 } else {
                     stringResource(R.string.locations_servers_count, serverCount)
                 }
+                val jitterNote = if (jitterMs != null && jitterMs > 0) {
+                    "  \u2022  " + stringResource(R.string.locations_jitter, jitterMs)
+                } else {
+                    ""
+                }
                 val limitedNote = if (quarantinedCount > 0) {
                     "  \u2022  " + stringResource(R.string.locations_limited, quarantinedCount)
                 } else {
@@ -579,7 +640,7 @@ private fun CityRow(
                 } else {
                     serverLabel
                 }
-                val subtitle = base + limitedNote
+                val subtitle = base + jitterNote + limitedNote
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,

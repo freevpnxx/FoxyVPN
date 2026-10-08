@@ -224,6 +224,8 @@ fun HomeScreen(
                         state = state,
                         accent = accent,
                         size = 184.dp,
+                        connectLabel = stringResource(R.string.power_connect),
+                        disconnectLabel = stringResource(R.string.power_disconnect),
                         onToggle = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             if (state == ConnectionState.DISCONNECTED) onRequestConnect() else onDisconnect()

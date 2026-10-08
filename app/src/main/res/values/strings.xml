@@ -76,6 +76,10 @@
     <string name="locations_latency_unavailable">unavailable</string>
     <string name="locations_servers_count">%1$d servers</string>
     <string name="locations_one_server">1 server</string>
+        <string name="locations_refresh">Refresh and re-ping servers</string>
+    <string name="locations_sort_ping">Sort by latency</string>
+    <string name="locations_sort_name">Sort by name</string>
+    <string name="locations_jitter">±%1$d ms</string>
     <string name="locations_limited">%1$d unavailable</string>
     <string name="locations_no_servers">No servers available</string>
     <string name="locations_none_for_city">No available servers in %1$s</string>
@@ -131,6 +135,13 @@
     <string name="settings_section_local_proxy">Local proxy</string>
     <string name="settings_section_split">Split tunneling</string>
     <string name="settings_section_advanced">Advanced</string>
+        <string name="settings_language">Language</string>
+    <string name="settings_language_desc">English or Persian</string>
+    <string name="lang_system">Follow the system</string>
+    <string name="lang_en">English</string>
+    <string name="lang_fa">فارسی</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="err_vpn_permission">FoxyVPN needs Android's VPN permission to tunnel this device's traffic. Proxy-only mode in Settings works without it.</string>
     <string name="settings_section_reliability">Reliability</string>
     <string name="settings_section_about">About</string>
     <string name="settings_section_account">Account</string>
