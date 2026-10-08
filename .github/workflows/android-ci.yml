@@ -148,38 +148,45 @@ jobs:
           fi
           ls -la dist
 
-      # Without this, "it will not install" is unanswerable from the outside: the APK cannot be
-      # downloaded from a sandbox, and the debug keystore Gradle generates is per-runner, so two
-      # releases can carry different signatures and Android refuses the update. Printing the
-      # certificate digest makes that visible and comparable between releases.
+      # Purely informational, so it must never be able to fail the release: GitHub runs `run:`
+      # blocks under `bash -e`, and a grep that matches nothing would otherwise abort the job.
       - name: Report the signing certificate
+        continue-on-error: true
         env:
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
-          set -o pipefail
+          set +e
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner not found; skipping the certificate report." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           {
             echo "## APK signature"
             echo ""
             if [ "$SIGNED" = "true" ]; then
-              echo "Signed with the repository's release keystore. This signature is stable across releases."
+              echo "Signed with the repository's release keystore; stable across releases."
             else
               echo "No \`SIGNING_KEYSTORE_BASE64\` secret is set, so this is the **debug** build."
-              echo "Gradle generates a fresh debug keystore per runner, so the digest below may differ"
-              echo "from the previous release, and Android will then refuse to update in place."
+              echo "Gradle generates a fresh debug keystore per runner, so this digest will differ"
+              echo "from the previous release and Android will refuse to update in place."
             fi
             echo ""
             echo "| APK | Signer | SHA-256 |"
             echo "| --- | --- | --- |"
             for apk in dist/*.apk; do
               [ -e "$apk" ] || continue
-              out=$("$APKSIGNER" verify --print-certs "$apk" 2>&1) || {
-                echo "| $(basename "$apk") | **verify failed** | \`$(echo "$out" | head -1)\` |"; continue; }
-              dn=$(echo "$out" | grep -m1 "Signer #1 certificate DN" | sed "s/.*DN: //")
-              sha=$(echo "$out" | grep -m1 "Signer #1 certificate SHA-256 digest" | awk "{print \$NF}")
+              out=$("$APKSIGNER" verify --print-certs "$apk" 2>&1)
+              if [ $? -ne 0 ]; then
+                echo "| $(basename "$apk") | **verify failed** | - |"
+                continue
+              fi
+              dn=$(printf '%s' "$out" | grep -m1 "certificate DN" | sed 's/.*DN: //')
+              sha=$(printf '%s' "$out" | grep -m1 "SHA-256 digest" | awk '{print $NF}')
               echo "| $(basename "$apk") | ${dn:-unknown} | \`${sha:-unknown}\` |"
             done
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY" 2>&1
+          exit 0
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
