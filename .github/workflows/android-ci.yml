@@ -193,7 +193,9 @@ jobs:
   # to update in place across different signatures, which shows up to the user as "app not
   # installed" with no explanation.
   inspect-signatures:
-    if: github.event_name == 'workflow_dispatch'
+    # Also runs on tags: the comparison is only interesting once a release exists, and this
+    # sandbox cannot trigger workflow_dispatch (403 on the dispatch endpoint).
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write
