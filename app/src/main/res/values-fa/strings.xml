@@ -53,14 +53,15 @@
     <string name="quota_used_of">%1$s از %2$s مصرف شده</string>
     <string name="quota_unlimited">ترافیک نامحدود</string>
     <string name="quota_unlimited_subtitle">این حساب سقف ماهانه ندارد</string>
+        <string name="quota_left_hint">باقی‌مانده این ماه</string>
     <string name="quota_resets_in">تا بازنشانی %1$s</string>
     <string name="quota_unavailable">سهمیه نامشخص</string>
     <string name="quota_unavailable_subtitle">سرور سهمیه‌ای گزارش نکرد</string>
 
     <!-- کارت مکان در خانه -->
-    <string name="home_location">مکان</string>
-    <string name="home_location_default">پیشنهادی</string>
-    <string name="home_location_default_subtitle">سریع‌ترین سرور در دسترس</string>
+    <string name="home_servers">سرورها</string>
+    <string name="home_servers_default">پیشنهادی</string>
+    <string name="home_servers_default_subtitle">سریع‌ترین سرور در دسترس</string>
 
     <!-- مکان‌ها -->
     <string name="locations_title">انتخاب مکان</string>

@@ -1,5 +1,6 @@
 package dev.vulpes.tunnel.ui.screens
 
+import dev.vulpes.tunnel.vpn.PingUtil
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -29,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Public
@@ -84,11 +86,20 @@ fun HomeScreen(
     onDisconnect: () -> Unit,
     onOpenServers: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenLogs: () -> Unit,
 ) {
     val state by FoxyVpnService.state.collectAsState()
     val lastError by FoxyVpnService.lastError.collectAsState()
     val session by FoxyVpnService.sessionStats.collectAsState()
     val selectedProxy by app.proxyStateStore.selectedProxyFlow.collectAsState()
+
+    // Latency of the server currently selected, so the home screen can show it next to the flag.
+    var serverPingMs by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(selectedProxy?.host, selectedProxy?.port) {
+        serverPingMs = null
+        val proxy = selectedProxy ?: return@LaunchedEffect
+        serverPingMs = PingUtil.sample(proxy.host, proxy.port)?.latencyMs
+    }
 
     val statusColors = LocalFoxyStatusColors.current
     val systemInDarkTheme = isSystemInDarkTheme()
@@ -144,6 +155,13 @@ fun HomeScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.action_settings),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     val mode = themeController.mode
                     val showingDark = themeController.resolveDark(systemInDarkTheme)
                     Box(
@@ -245,16 +263,6 @@ fun HomeScreen(
                     fontWeight = FontWeight.Bold,
                 )
 
-                Text(
-                    text = when (state) {
-                        ConnectionState.CONNECTED -> stringResource(R.string.state_connected_subtitle)
-                        ConnectionState.CONNECTING -> stringResource(R.string.state_connecting_subtitle)
-                        ConnectionState.DISCONNECTED -> stringResource(R.string.state_disconnected_subtitle)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
                 val error = lastError
                 if (error != null && state != ConnectionState.CONNECTING) {
                     Spacer(Modifier.height(10.dp))
@@ -263,6 +271,85 @@ fun HomeScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
+                }
+
+                Spacer(Modifier.height(22.dp))
+
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onOpenServers,
+                ) {
+                    Text(
+                        stringResource(R.string.home_servers),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val flag = selectedProxy?.let { flagFor(it.countryCode) }.orEmpty()
+                        if (flag.isNotEmpty()) {
+                            Text(flag, fontSize = 30.sp)
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(accent.copy(alpha = 0.16f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Public,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                selectedProxy?.let { it.countryName.ifBlank { it.countryCode } }
+                                    ?: stringResource(R.string.home_servers_default),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                selectedProxy?.let { proxy ->
+                                    listOfNotNull(
+                                        proxy.cityCode.takeIf { it.isNotBlank() },
+                                        proxy.host,
+                                    ).joinToString("  \u2022  ")
+                                } ?: stringResource(R.string.home_servers_default_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        val ping = serverPingMs
+                        if (ping != null) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(percent = 50))
+                                    .background(accent.copy(alpha = 0.14f))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                            ) {
+                                Text(
+                                    stringResource(R.string.locations_latency_value, ping),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = accent,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 AnimatedVisibility(
@@ -277,82 +364,15 @@ fun HomeScreen(
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onOpenServers,
-                ) {
-                    Text(
-                        stringResource(R.string.home_location),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(accent.copy(alpha = 0.16f)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Public,
-                                contentDescription = null,
-                                tint = accent,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                selectedProxy?.let { it.countryName.ifBlank { it.countryCode } }
-                                    ?: stringResource(R.string.home_location_default),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Text(
-                                selectedProxy?.host
-                                    ?: stringResource(R.string.home_location_default_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
 
                 Spacer(Modifier.height(12.dp))
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(percent = 50))
-                        .clickable(onClick = onOpenSettings)
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.action_settings),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 15.sp,
-                        )
-                    }
+                IconButton(onClick = onOpenLogs) {
+                    Icon(
+                        imageVector = Icons.Filled.Code,
+                        contentDescription = stringResource(R.string.settings_view_logs),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
 
                 Spacer(Modifier.height(28.dp))

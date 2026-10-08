@@ -1,5 +1,9 @@
 package dev.vulpes.tunnel.ui.screens
 
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -83,7 +87,7 @@ private enum class SortMode { NAME, PING }
 private const val FASTEST_LIMIT = 5
 
 /** ISO 3166-1 alpha-2 to a flag emoji via regional indicator symbols. No image assets needed. */
-private fun flagFor(code: String): String {
+internal fun flagFor(code: String): String {
     val normalized = code.trim().uppercase()
     if (normalized.length != 2 || !normalized.all { it in 'A'..'Z' }) return ""
     val builder = StringBuilder()
@@ -113,7 +117,58 @@ fun ServerListScreen(
     // Bumping this re-runs every probe, which is what the refresh button does.
     var pingEpoch by remember { mutableStateOf(0) }
     var sortMode by remember { mutableStateOf(SortMode.NAME) }
-    val isRefreshing = pingStates.values.any { it == PingState.PENDING }
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    /**
+     * Probes every location from one place.
+     *
+     * Pinging from a per-row LaunchedEffect leaks: when a row scrolls out of composition its
+     * coroutine is cancelled with the entry still marked PENDING, and a refresh button gated on
+     * "anything pending" then stays disabled forever.
+     */
+    LaunchedEffect(countries, pingEpoch) {
+        if (countries.isEmpty()) return@LaunchedEffect
+        val gate = Semaphore(8)
+        val targets = countries
+            .filter { it.code != RECOMMENDED_COUNTRY_CODE }
+            .flatMap { country -> country.cities.map { country to it } }
+        if (targets.isEmpty()) return@LaunchedEffect
+
+        isRefreshing = true
+        try {
+            coroutineScope {
+                targets.forEach { (country, city) ->
+                    val key = "${country.code}:${city.code}"
+                    // Skip what this epoch already resolved, so a refresh does not redo the work
+                    // a still-running sweep is doing.
+                    if (pingStates[key] == PingState.DONE || pingStates[key] == PingState.PENDING) {
+                        return@forEach
+                    }
+                    launch {
+                        gate.withPermit {
+                            pingStates[key] = PingState.PENDING
+                            val target = city.servers.firstOrNull { !it.quarantined }
+                                ?.let { ServerListClient.defaultConnectTarget(it) }
+                            if (target == null) {
+                                pingStates[key] = PingState.FAILED
+                                return@withPermit
+                            }
+                            val result = PingUtil.sample(target.first, target.second)
+                            if (result != null) {
+                                pingResults[key] = result
+                                pingStates[key] = PingState.DONE
+                            } else {
+                                pingResults.remove(key)
+                                pingStates[key] = PingState.FAILED
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            isRefreshing = false
+        }
+    }
 
     val keyboard = LocalSoftwareKeyboardController.current
 
@@ -204,8 +259,39 @@ fun ServerListScreen(
             }
     }
 
-    val rows = remember(orderedCountries, searchActive, favoriteCities, fastest, recommendedCountry) {
+    val pingSnapshot = pingResults.toMap()
+
+    val rows = remember(
+        orderedCountries,
+        searchActive,
+        favoriteCities,
+        fastest,
+        recommendedCountry,
+        sortMode,
+        pingSnapshot,
+    ) {
         buildList {
+            if (sortMode == SortMode.PING && !searchActive) {
+                // Flat and best-measured first. Sorting the cities inside each country group is
+                // invisible to the user, because the country headers never move.
+                val measured = mutableListOf<Triple<VpnCountry, Int, Int>>()
+                val unmeasured = mutableListOf<Pair<VpnCountry, Int>>()
+                for (country in orderedCountries) {
+                    country.cities.forEachIndexed { index, city ->
+                        val ms = pingSnapshot["${country.code}:${city.code}"]?.latencyMs
+                        if (ms == null) unmeasured += country to index else measured += Triple(country, index, ms)
+                    }
+                }
+                measured.sortBy { it.third }
+                measured.forEach { (country, index, _) ->
+                    add(LocationRow.City(country, index, showCountry = true))
+                }
+                unmeasured.forEach { (country, index) ->
+                    add(LocationRow.City(country, index, showCountry = true))
+                }
+                return@buildList
+            }
+
             if (!searchActive) {
                 if (recommendedCountry != null) add(LocationRow.Recommended)
 
@@ -283,8 +369,10 @@ fun ServerListScreen(
                         )
                     }
                     IconButton(
-                        onClick = { pingEpoch++ },
-                        enabled = !isRefreshing,
+                        onClick = {
+                            pingStates.clear()
+                            pingEpoch++
+                        },
                     ) {
                         Icon(
                             Icons.Default.Refresh,
@@ -386,27 +474,6 @@ fun ServerListScreen(
                                     val pingKey = "${row.country.code}:${city.code}"
                                     val pingSample = pingResults[pingKey]
                                     val pingState = pingStates[pingKey] ?: PingState.PENDING
-
-                                    LaunchedEffect(pingKey, pingEpoch) {
-                                        if (pingEpoch == 0 && pingStates.containsKey(pingKey)) {
-                                            return@LaunchedEffect
-                                        }
-                                        pingStates[pingKey] = PingState.PENDING
-                                        val target = city.servers.firstOrNull { !it.quarantined }
-                                            ?.let { ServerListClient.defaultConnectTarget(it) }
-                                        if (target == null) {
-                                            pingStates[pingKey] = PingState.FAILED
-                                            return@LaunchedEffect
-                                        }
-                                        val result = PingUtil.sample(target.first, target.second)
-                                        if (result != null) {
-                                            pingResults[pingKey] = result
-                                            pingStates[pingKey] = PingState.DONE
-                                        } else {
-                                            pingResults.remove(pingKey)
-                                            pingStates[pingKey] = PingState.FAILED
-                                        }
-                                    }
 
                                     val isFavorite = pingKey in favoriteKeys
                                     val isSelected = selected?.countryCode == row.country.code &&

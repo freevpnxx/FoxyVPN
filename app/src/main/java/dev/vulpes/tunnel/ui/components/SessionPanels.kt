@@ -1,5 +1,6 @@
 package dev.vulpes.tunnel.ui.components
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
@@ -104,19 +106,50 @@ fun QuotaCard(
     }
 
     GlassCard(modifier = modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = if (stats.quotaUnlimited) Icons.Filled.AllInclusive else Icons.Filled.Public,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(accent.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (stats.quotaUnlimited) {
+                        Icons.Filled.AllInclusive
+                    } else {
+                        Icons.Filled.Bolt
+                    },
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(Modifier.width(10.dp))
             Text(
                 stringResource(R.string.quota_section),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.weight(1f))
+            if (!stats.quotaUnlimited && remaining != null && max != null) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(barColor.copy(alpha = 0.15f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        "${(fraction * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = barColor,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(10.dp))
@@ -147,23 +180,18 @@ fun QuotaCard(
             }
 
             else -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom,
-                ) {
-                    Text(
-                        stringResource(R.string.quota_remaining, formatBytes(remaining)),
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                    Text(
-                        "${(fraction * 100).toInt()}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = barColor,
-                    )
-                }
+                Text(
+                    formatBytes(remaining),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.quota_left_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 QuotaBar(fraction = animatedFraction, color = barColor)
 
                 Spacer(Modifier.height(10.dp))

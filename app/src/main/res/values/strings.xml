@@ -53,14 +53,15 @@
     <string name="quota_used_of">%1$s of %2$s used</string>
     <string name="quota_unlimited">Unlimited data</string>
     <string name="quota_unlimited_subtitle">This account has no monthly cap</string>
+        <string name="quota_left_hint">left this month</string>
     <string name="quota_resets_in">Resets in %1$s</string>
     <string name="quota_unavailable">Allowance unknown</string>
     <string name="quota_unavailable_subtitle">The server did not report a quota</string>
 
     <!-- Home location card -->
-    <string name="home_location">Location</string>
-    <string name="home_location_default">Recommended</string>
-    <string name="home_location_default_subtitle">Fastest available server</string>
+    <string name="home_servers">Servers</string>
+    <string name="home_servers_default">Recommended</string>
+    <string name="home_servers_default_subtitle">Fastest available server</string>
 
     <!-- Locations -->
     <string name="locations_title">Choose location</string>

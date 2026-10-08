@@ -64,6 +64,7 @@ fun FoxyNavGraph(
                 onDisconnect = onDisconnect,
                 onOpenServers = { navController.navigate(FoxyRoutes.SERVERS) },
                 onOpenSettings = { navController.navigate(FoxyRoutes.SETTINGS) },
+                onOpenLogs = { navController.navigate(FoxyRoutes.LOGS) },
             )
         }
         composable(FoxyRoutes.SERVERS) {
