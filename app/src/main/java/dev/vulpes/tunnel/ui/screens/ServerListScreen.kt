@@ -200,7 +200,7 @@ fun ServerListScreen(
                 val country = countries.firstOrNull { it.code == parts.getOrNull(0) }
                     ?: return@mapNotNull null
                 val cityIndex = country.cities.indexOfFirst { it.code == parts.getOrNull(1) }
-                if (cityIndex < 0) null else Triple(country, cityIndex, latency)
+                if (cityIndex < 0) null else Triple(country, cityIndex, sample.latencyMs)
             }
     }
 
@@ -580,6 +580,7 @@ private fun CityRow(
     serverCount: Int,
     quarantinedCount: Int,
     pingMs: Int?,
+    jitterMs: Int?,
     pingState: PingState,
     isFavorite: Boolean,
     isSelected: Boolean,
