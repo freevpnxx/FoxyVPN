@@ -242,7 +242,9 @@ jobs:
           unique=$(echo "$digests" | tr ' ' '\n' | grep -c . | tr -d ' ')
           distinct=$(echo "$digests" | tr ' ' '\n' | grep . | sort -u | grep -c . | tr -d ' ')
           body+=$'\n'
-          if [ "$unique" = "$distinct" ] && [ "$unique" != "0" ]; then
+          # distinct == 1 is what "they all match" means. Comparing the two counts is backwards:
+          # when every APK differs, distinct equals unique and that reads as a match.
+          if [ "$distinct" = "1" ] && [ "$unique" != "0" ]; then
             body+="**All $unique APKs share one signature.** Updates should install in place."
           else
             body+="**$distinct different signatures across $unique APKs.** Android will refuse to"
