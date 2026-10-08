@@ -19,6 +19,9 @@
     <string name="state_connected_subtitle">All traffic is routed through the tunnel</string>
     <string name="state_connecting_subtitle">Tap to cancel</string>
     <string name="state_disconnected_subtitle">Tap the ring to start the tunnel</string>
+        <string name="tile_connected">VPN on</string>
+    <string name="tile_connecting">Connecting…</string>
+    <string name="tile_disconnected">VPN off</string>
     <string name="power_connect">Connect</string>
     <string name="power_disconnect">Disconnect</string>
 
@@ -152,6 +155,8 @@
 
     <string name="settings_proxy_only">Proxy-only mode</string>
     <string name="settings_proxy_only_desc">Run only the local SOCKS5 proxy, without a VPN interface</string>
+        <string name="socks_bind_loopback">Loopback only (127.0.0.1)</string>
+    <string name="socks_bind_all">All interfaces (0.0.0.0)</string>
     <string name="settings_local_address">Local address</string>
     <string name="settings_local_port">Local port</string>
 

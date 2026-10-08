@@ -638,7 +638,7 @@ private fun SocksBindAddressPickerDialog(
         title = { Text(stringResource(R.string.settings_local_address)) },
         text = {
             Column {
-                SettingsStore.SOCKS_BIND_ADDRESS_PRESETS.forEach { (address, label) ->
+                SettingsStore.SOCKS_BIND_ADDRESS_PRESETS.forEach { (address, labelRes) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -647,7 +647,7 @@ private fun SocksBindAddressPickerDialog(
                             .padding(vertical = 4.dp),
                     ) {
                         RadioButton(selected = selected == address, onClick = { selected = address })
-                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                        Text(stringResource(labelRes), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }

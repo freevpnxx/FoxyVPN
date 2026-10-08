@@ -1,5 +1,10 @@
 package dev.vulpes.tunnel.ui.screens
 
+import dev.vulpes.tunnel.data.formatBytesPerSecond
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.border
 import java.util.Locale
@@ -95,6 +100,7 @@ fun HomeScreen(
     val state by FoxyVpnService.state.collectAsState()
     val lastError by FoxyVpnService.lastError.collectAsState()
     val session by FoxyVpnService.sessionStats.collectAsState()
+    val speed by FoxyVpnService.speed.collectAsState()
     val selectedProxy by app.proxyStateStore.selectedProxyFlow.collectAsState()
 
     // Latency of the server currently selected, so the home screen can show it next to the flag.
@@ -353,6 +359,33 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                             )
                             Spacer(Modifier.height(16.dp))
+                            // Live throughput. The service already samples this about once a
+                            // second; it was only ever surfaced in the notification subtext.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(accent.copy(alpha = 0.07f))
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SpeedReadout(
+                                    icon = Icons.Filled.ArrowDownward,
+                                    value = formatBytesPerSecond(speed.downBytesPerSecond),
+                                    tint = accent,
+                                )
+                                SpeedReadout(
+                                    icon = Icons.Filled.ArrowUpward,
+                                    value = formatBytesPerSecond(speed.upBytesPerSecond),
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(Modifier.height(16.dp))
                             SessionSection(stats = session, elapsedMs = elapsedMs, accent = accent)
                             Spacer(Modifier.height(18.dp))
                             HorizontalDivider(
@@ -393,5 +426,28 @@ fun HomeScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SpeedReadout(
+    icon: ImageVector,
+    value: String,
+    tint: Color,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = tint,
+        )
     }
 }

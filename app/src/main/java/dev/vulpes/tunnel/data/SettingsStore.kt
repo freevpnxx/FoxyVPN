@@ -188,9 +188,10 @@ class SettingsStore(context: Context) {
         const val DEFAULT_UPSTREAM_PROXY_PORT = 1080
         const val DEFAULT_CUSTOM_DNS_SERVER = "1.1.1.1"
 
+        /** Address to a label resource; the address itself must not be translated. */
         val SOCKS_BIND_ADDRESS_PRESETS = listOf(
-            "127.0.0.1" to "Loopback only (127.0.0.1)",
-            "0.0.0.0" to "All interfaces (0.0.0.0)",
+            "127.0.0.1" to R.string.socks_bind_loopback,
+            "0.0.0.0" to R.string.socks_bind_all,
         )
 
         val CUSTOM_DNS_PRESETS = listOf(

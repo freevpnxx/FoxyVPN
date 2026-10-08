@@ -47,6 +47,17 @@
                 android:value="vpn" />
         </service>
         
+        <service
+            android:name=".FoxyTileService"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_notification">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

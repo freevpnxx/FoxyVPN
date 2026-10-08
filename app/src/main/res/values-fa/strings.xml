@@ -19,6 +19,9 @@
     <string name="state_connected_subtitle">همه‌ی ترافیک از تونل عبور می‌کند</string>
     <string name="state_connecting_subtitle">برای لغو لمس کنید</string>
     <string name="state_disconnected_subtitle">برای شروع تونل، حلقه را لمس کنید</string>
+        <string name="tile_connected">وی‌پی‌ان روشن</string>
+    <string name="tile_connecting">در حال اتصال…</string>
+    <string name="tile_disconnected">وی‌پی‌ان خاموش</string>
     <string name="power_connect">اتصال</string>
     <string name="power_disconnect">قطع اتصال</string>
 
@@ -152,6 +155,8 @@
 
     <string name="settings_proxy_only">حالت فقط پروکسی</string>
     <string name="settings_proxy_only_desc">فقط پروکسی SOCKS5 محلی اجرا شود، بدون رابط VPN</string>
+        <string name="socks_bind_loopback">فقط loopback (127.0.0.1)</string>
+    <string name="socks_bind_all">همه رابط‌ها (0.0.0.0)</string>
     <string name="settings_local_address">نشانی محلی</string>
     <string name="settings_local_port">پورت محلی</string>
 

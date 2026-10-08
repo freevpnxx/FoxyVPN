@@ -1241,9 +1241,9 @@ class FoxyVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val builder = NotificationCompat.Builder(this, FoxyVpnApp.VPN_NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("FoxyVPN")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(openIntent)
             .setOngoing(true)
 
@@ -1257,7 +1257,7 @@ class FoxyVpnService : VpnService() {
             .setLocalOnly(true)
 
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", disconnectIntent)
+            .addAction(R.drawable.ic_notification, getString(R.string.power_disconnect), disconnectIntent)
         if (subText != null) {
             builder.setStyle(NotificationCompat.BigTextStyle().bigText("$text\n$subText"))
         }
