@@ -5,6 +5,7 @@ on:
     tags: ["v*.*.*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -85,7 +86,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: "platform-tools"
+          packages: "platform-tools build-tools;35.0.0"
 
       - name: Install NDK
         run: sdkmanager --install "ndk;26.1.10909125"
@@ -147,8 +148,106 @@ jobs:
           fi
           ls -la dist
 
+      # Without this, "it will not install" is unanswerable from the outside: the APK cannot be
+      # downloaded from a sandbox, and the debug keystore Gradle generates is per-runner, so two
+      # releases can carry different signatures and Android refuses the update. Printing the
+      # certificate digest makes that visible and comparable between releases.
+      - name: Report the signing certificate
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          set -o pipefail
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          {
+            echo "## APK signature"
+            echo ""
+            if [ "$SIGNED" = "true" ]; then
+              echo "Signed with the repository's release keystore. This signature is stable across releases."
+            else
+              echo "No \`SIGNING_KEYSTORE_BASE64\` secret is set, so this is the **debug** build."
+              echo "Gradle generates a fresh debug keystore per runner, so the digest below may differ"
+              echo "from the previous release, and Android will then refuse to update in place."
+            fi
+            echo ""
+            echo "| APK | Signer | SHA-256 |"
+            echo "| --- | --- | --- |"
+            for apk in dist/*.apk; do
+              [ -e "$apk" ] || continue
+              out=$("$APKSIGNER" verify --print-certs "$apk" 2>&1) || {
+                echo "| $(basename "$apk") | **verify failed** | \`$(echo "$out" | head -1)\` |"; continue; }
+              dn=$(echo "$out" | grep -m1 "Signer #1 certificate DN" | sed "s/.*DN: //")
+              sha=$(echo "$out" | grep -m1 "Signer #1 certificate SHA-256 digest" | awk "{print \$NF}")
+              echo "| $(basename "$apk") | ${dn:-unknown} | \`${sha:-unknown}\` |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.apk
           generate_release_notes: true
+
+  # Downloads the APK already published on each release and prints the certificate that signed
+  # it. Runners can reach the release CDN even though a development sandbox cannot, so this is the
+  # only way to tell from outside whether two releases carry the same signature. Android refuses
+  # to update in place across different signatures, which shows up to the user as "app not
+  # installed" with no explanation.
+  inspect-signatures:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "build-tools;35.0.0"
+
+      - name: Compare the signature of every published release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          echo "apksigner: $APKSIGNER"
+
+          body=$'### Signing certificate per release\n\n| Release | APK | SHA-256 of signer |\n| --- | --- | --- |\n'
+          digests=""
+          for tag in $(gh release list --repo "$REPO" --limit 6 | awk '{print $1}'); do
+            rm -rf /tmp/apk && mkdir -p /tmp/apk
+            if ! gh release download "$tag" --repo "$REPO" --dir /tmp/apk --pattern '*.apk' 2>/dev/null; then
+              body+="| $tag | (no APK) | - |"$'\n'; continue
+            fi
+            for apk in /tmp/apk/*.apk; do
+              out=$("$APKSIGNER" verify --print-certs "$apk" 2>&1) || {
+                body+="| $tag | $(basename "$apk") | **verify failed** |"$'\n'; continue; }
+              sha=$(echo "$out" | grep -m1 "certificate SHA-256 digest" | awk '{print $NF}')
+              body+="| $tag | $(basename "$apk") | \`${sha:0:32}…\` |"$'\n'
+              digests="$digests $sha"
+            done
+          done
+
+          unique=$(echo "$digests" | tr ' ' '\n' | grep -c . | tr -d ' ')
+          distinct=$(echo "$digests" | tr ' ' '\n' | grep . | sort -u | grep -c . | tr -d ' ')
+          body+=$'\n'
+          if [ "$unique" = "$distinct" ] && [ "$unique" != "0" ]; then
+            body+="**All $unique APKs share one signature.** Updates should install in place."
+          else
+            body+="**$distinct different signatures across $unique APKs.** Android will refuse to"
+            body+=" update in place between them; the previous version has to be uninstalled first."
+            body+=" A stable release keystore (the \`SIGNING_KEYSTORE_BASE64\` secret) fixes this."
+          fi
+
+          echo "$body"
+          printf '%s' "$body" > /tmp/summary.md
+          gh api "repos/$REPO/commits/$SHA/comments" -f body="$(cat /tmp/summary.md)" > /dev/null
