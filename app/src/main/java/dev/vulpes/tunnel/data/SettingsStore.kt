@@ -9,7 +9,7 @@ import dev.vulpes.tunnel.ui.theme.ThemeMode
 
 class SettingsStore(context: Context) {
     private val appContext = context.applicationContext
-    private val prefs = appContext.getSharedPreferences("foxyvpn_settings", Context.MODE_PRIVATE)
+    private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val credentialsPrefs by lazy {
         val masterKey = MasterKey.Builder(appContext)
@@ -151,6 +151,20 @@ class SettingsStore(context: Context) {
     }
 
     companion object {
+        /**
+         * Reads the language choice straight off a base context, without constructing a
+         * SettingsStore.
+         *
+         * `Application.attachBaseContext` runs before the ContextImpl knows which Application it
+         * belongs to, so `context.applicationContext` is still null there and the SettingsStore
+         * constructor would throw a NullPointerException on it. Reading the preferences from the
+         * context itself is safe at that point.
+         */
+        fun readLanguage(context: Context): String =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_LANGUAGE, LocaleManager.SYSTEM) ?: LocaleManager.SYSTEM
+
+        private const val PREFS_NAME = "foxyvpn_settings"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_LANGUAGE = "app_language"
         private const val KEY_KILL_SWITCH = "kill_switch_enabled"

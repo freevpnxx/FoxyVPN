@@ -152,7 +152,7 @@ private fun proxyPassRenewalDelayMs(expiresAtEpochSeconds: Long?): Long {
 class FoxyVpnService : VpnService() {
 
     override fun attachBaseContext(newBase: android.content.Context) {
-        super.attachBaseContext(LocaleManager.wrap(newBase, SettingsStore(newBase).appLanguage))
+        super.attachBaseContext(LocaleManager.wrap(newBase, SettingsStore.readLanguage(newBase)))
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

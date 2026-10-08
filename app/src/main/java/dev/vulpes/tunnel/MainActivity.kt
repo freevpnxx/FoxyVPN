@@ -24,7 +24,7 @@ import dev.vulpes.tunnel.vpn.FoxyVpnService
 class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: android.content.Context) {
-        super.attachBaseContext(LocaleManager.wrap(newBase, SettingsStore(newBase).appLanguage))
+        super.attachBaseContext(LocaleManager.wrap(newBase, SettingsStore.readLanguage(newBase)))
     }
 
     private val vpnPermissionLauncher = registerForActivityResult(

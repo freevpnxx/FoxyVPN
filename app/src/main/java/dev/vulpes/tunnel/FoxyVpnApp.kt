@@ -22,7 +22,7 @@ class FoxyVpnApp : Application() {
 
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(
-            LocaleManager.wrap(newBase, SettingsStore(newBase).appLanguage),
+            LocaleManager.wrap(newBase, SettingsStore.readLanguage(newBase)),
         )
     }
 

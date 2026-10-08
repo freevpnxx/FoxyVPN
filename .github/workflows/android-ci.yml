@@ -38,6 +38,24 @@ jobs:
       - name: Generate Gradle wrapper (if missing)
         run: gradle wrapper --gradle-version 8.10.2 || true
 
+      # Application.attachBaseContext runs before the ContextImpl knows which Application it
+      # belongs to, so context.applicationContext is null there. Anything constructed in that
+      # method which reads it throws a NullPointerException and the app crashes before its first
+      # frame. This shipped to a user once; the compiler cannot catch it, so grep for it.
+      - name: Check attachBaseContext does not read applicationContext
+        shell: bash
+        run: |
+          set -e
+          hits=$(find app/src/main/java -name '*.kt' -print0 \
+            | xargs -0 awk '/override fun attachBaseContext/,/^    }$/' \
+            | grep -n 'applicationContext' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::attachBaseContext must not touch applicationContext; it is null until super.attachBaseContext returns"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK: no attachBaseContext body reads applicationContext."
+
       - name: Assemble debug APK
         shell: bash
         run: |
