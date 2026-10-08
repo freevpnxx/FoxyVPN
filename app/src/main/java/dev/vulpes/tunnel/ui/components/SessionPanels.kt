@@ -234,6 +234,29 @@ fun QuotaCard(
 }
 
 
+/** A rounded, gradient-filled meter drawn by hand so the corners and cap stay crisp. */
+@Composable
+private fun QuotaBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
+    val track = MaterialTheme.colorScheme.surfaceContainerHighest
+    Canvas(modifier.fillMaxWidth().height(10.dp)) {
+        val radius = CornerRadius(size.height / 2f, size.height / 2f)
+        drawRoundRect(color = track, cornerRadius = radius)
+        val width = size.width * fraction
+        if (width > 1f) {
+            drawRoundRect(
+                brush = Brush.horizontalGradient(
+                    listOf(color.copy(alpha = 0.65f), color),
+                    startX = 0f,
+                    endX = width,
+                ),
+                topLeft = Offset.Zero,
+                size = Size(width, size.height),
+                cornerRadius = radius,
+            )
+        }
+    }
+}
+
 /** One icon + label + value cell used inside the session strip. */
 @Composable
 private fun SessionCell(

@@ -50,8 +50,8 @@ android {
         // Ship only the two locales the app translates; AndroidX and Material carry ~80 more.
         resourceConfigurations += listOf("en", "fa")
 
-        versionCode = 55
-        versionName = "1.8.0"
+        versionCode = 56
+        versionName = "1.8.1"
 
         externalNativeBuild {
             ndkBuild {
