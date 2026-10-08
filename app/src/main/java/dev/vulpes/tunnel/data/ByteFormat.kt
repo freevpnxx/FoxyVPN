@@ -18,6 +18,23 @@ fun formatBytes(bytes: Long): String {
     return String.format(Locale.US, pattern, value, UNITS[index])
 }
 
+/**
+ * Same units as [formatBytes] but with two decimals, for a headline figure the user is meant to
+ * read closely rather than glance at.
+ */
+fun formatBytesPrecise(bytes: Long): String {
+    if (bytes < 0) return "\u2014"
+    if (bytes < 1024) return "$bytes B"
+    var value = bytes / UNIT
+    var index = 0
+    while (value >= UNIT && index < UNITS.lastIndex) {
+        value /= UNIT
+        index++
+    }
+    val pattern = if (value >= 100) "%.1f %s" else "%.2f %s"
+    return String.format(Locale.US, pattern, value, UNITS[index])
+}
+
 fun formatBytesPerSecond(bytesPerSecond: Long): String =
     "${formatBytes(bytesPerSecond.coerceAtLeast(0))}/s"
 

@@ -1,5 +1,8 @@
 package dev.vulpes.tunnel.ui.screens
 
+import androidx.compose.foundation.border
+import java.util.Locale
+import androidx.compose.ui.platform.LocalConfiguration
 import dev.vulpes.tunnel.vpn.PingUtil
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -70,7 +73,6 @@ import dev.vulpes.tunnel.ui.components.GlassCard
 import dev.vulpes.tunnel.ui.components.PowerOrb
 import dev.vulpes.tunnel.ui.components.QuotaCard
 import dev.vulpes.tunnel.ui.components.SessionStrip
-import dev.vulpes.tunnel.ui.components.StatusPill
 import dev.vulpes.tunnel.ui.components.rememberTickingElapsed
 import dev.vulpes.tunnel.ui.theme.LocalFoxyStatusColors
 import dev.vulpes.tunnel.ui.theme.ThemeController
@@ -95,6 +97,7 @@ fun HomeScreen(
     val selectedProxy by app.proxyStateStore.selectedProxyFlow.collectAsState()
 
     // Latency of the server currently selected, so the home screen can show it next to the flag.
+    val uiLocale = LocalConfiguration.current.locales[0]
     var serverPingMs by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(selectedProxy?.host, selectedProxy?.port) {
         serverPingMs = null
@@ -131,12 +134,6 @@ fun HomeScreen(
         animationSpec = enterSpec,
         label = "home-entrance-gap",
     )
-
-    val statusLabel = when (state) {
-        ConnectionState.CONNECTED -> stringResource(R.string.status_protected)
-        ConnectionState.CONNECTING -> stringResource(R.string.status_connecting)
-        ConnectionState.DISCONNECTED -> stringResource(R.string.status_disconnected)
-    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -224,19 +221,6 @@ fun HomeScreen(
 
                 AnimatedVisibility(
                     visible = entered,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 }),
-                ) {
-                    StatusPill(
-                        text = statusLabel,
-                        dotColor = accent,
-                        pulsing = state != ConnectionState.DISCONNECTED,
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                AnimatedVisibility(
-                    visible = entered,
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
                 ) {
                     PowerOrb(
@@ -292,7 +276,20 @@ fun HomeScreen(
                     ) {
                         val flag = selectedProxy?.let { flagFor(it.countryCode) }.orEmpty()
                         if (flag.isNotEmpty()) {
-                            Text(flag, fontSize = 30.sp)
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(accent.copy(alpha = 0.10f))
+                                    .border(
+                                        1.dp,
+                                        accent.copy(alpha = 0.22f),
+                                        RoundedCornerShape(14.dp),
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(flag, fontSize = 24.sp)
+                            }
                         } else {
                             Box(
                                 modifier = Modifier
@@ -311,18 +308,26 @@ fun HomeScreen(
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
+                            // The server list hands back English country names; render them in the
+                            // app's own language instead so the card actually translates.
+                            val countryLabel = selectedProxy?.let { proxy ->
+                                val code = proxy.countryCode.trim().uppercase()
+                                if (code.length == 2) {
+                                    Locale("", code).getDisplayCountry(uiLocale)
+                                        .ifBlank { proxy.countryName.ifBlank { code } }
+                                } else {
+                                    proxy.countryName.ifBlank { proxy.countryCode }
+                                }
+                            } ?: stringResource(R.string.home_servers_default)
                             Text(
-                                selectedProxy?.let { it.countryName.ifBlank { it.countryCode } }
-                                    ?: stringResource(R.string.home_servers_default),
+                                countryLabel,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
+                            Spacer(Modifier.height(2.dp))
                             Text(
                                 selectedProxy?.let { proxy ->
-                                    listOfNotNull(
-                                        proxy.cityCode.takeIf { it.isNotBlank() },
-                                        proxy.host,
-                                    ).joinToString("  \u2022  ")
+                                    stringResource(R.string.home_server_host, proxy.host)
                                 } ?: stringResource(R.string.home_servers_default_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

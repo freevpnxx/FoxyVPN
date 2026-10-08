@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.vulpes.tunnel.R
 import dev.vulpes.tunnel.data.formatBytes
+import dev.vulpes.tunnel.data.formatBytesPrecise
 import dev.vulpes.tunnel.data.formatDuration
 import dev.vulpes.tunnel.data.formatRoughSpan
 import dev.vulpes.tunnel.vpn.SessionStats
@@ -66,11 +67,11 @@ fun rememberTickingElapsed(startedAtElapsedMs: Long?, active: Boolean): Long {
 }
 
 /**
- * Monthly allowance card.
+ * Remaining data allowance.
  *
- * Has three honest states: a metered quota, an explicitly unlimited account, and "unknown" for
- * when the server simply did not send the headers. The unknown state is rendered as such rather
- * than showing a fabricated number.
+ * The figure is [SessionStats.liveQuotaRemaining], i.e. the allowance the proxy pass reported at
+ * connect time minus every byte this session has counted since, so it keeps falling as the user
+ * downloads instead of sitting at its stale connect-time value.
  */
 @Composable
 fun QuotaCard(
@@ -78,7 +79,7 @@ fun QuotaCard(
     accent: Color,
     modifier: Modifier = Modifier,
 ) {
-    val remaining = stats.quotaRemaining
+    val remaining = stats.liveQuotaRemaining
     val max = stats.quotaMax
     val used = if (remaining != null && max != null) (max - remaining).coerceAtLeast(0L) else null
     val fraction = if (used != null && max != null && max > 0) {
@@ -92,7 +93,11 @@ fun QuotaCard(
         label = "quota-fraction",
     )
     val barColor by animateColorAsState(
-        targetValue = if (fraction > 0.85f) MaterialTheme.colorScheme.error else accent,
+        targetValue = when {
+            fraction > 0.85f -> MaterialTheme.colorScheme.error
+            fraction > 0.65f -> MaterialTheme.colorScheme.tertiary
+            else -> accent
+        },
         label = "quota-color",
     )
 
@@ -114,7 +119,7 @@ fun QuotaCard(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(RoundedCornerShape(11.dp))
-                    .background(accent.copy(alpha = 0.15f)),
+                    .background(barColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -124,7 +129,7 @@ fun QuotaCard(
                         Icons.Filled.Bolt
                     },
                     contentDescription = null,
-                    tint = accent,
+                    tint = barColor,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -135,7 +140,7 @@ fun QuotaCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            if (!stats.quotaUnlimited && remaining != null && max != null) {
+            if (!stats.quotaUnlimited && max != null) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(percent = 50))
@@ -152,13 +157,14 @@ fun QuotaCard(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(14.dp))
 
         when {
             stats.quotaUnlimited -> {
                 Text(
                     stringResource(R.string.quota_unlimited),
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     stringResource(R.string.quota_unlimited_subtitle),
@@ -171,6 +177,7 @@ fun QuotaCard(
                 Text(
                     stringResource(R.string.quota_unavailable),
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     stringResource(R.string.quota_unavailable_subtitle),
@@ -180,16 +187,21 @@ fun QuotaCard(
             }
 
             else -> {
-                Text(
-                    formatBytes(remaining),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    stringResource(R.string.quota_left_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        formatBytesPrecise(remaining),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = barColor,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.quota_left_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
                 QuotaBar(fraction = animatedFraction, color = barColor)
@@ -221,28 +233,6 @@ fun QuotaCard(
     }
 }
 
-/** A rounded, gradient-filled meter drawn by hand so the corners and cap stay crisp. */
-@Composable
-private fun QuotaBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
-    val track = MaterialTheme.colorScheme.surfaceContainerHighest
-    Canvas(modifier.fillMaxWidth().height(10.dp)) {
-        val radius = CornerRadius(size.height / 2f, size.height / 2f)
-        drawRoundRect(color = track, cornerRadius = radius)
-        val width = size.width * fraction
-        if (width > 1f) {
-            drawRoundRect(
-                brush = Brush.horizontalGradient(
-                    listOf(color.copy(alpha = 0.65f), color),
-                    startX = 0f,
-                    endX = width,
-                ),
-                topLeft = Offset.Zero,
-                size = Size(width, size.height),
-                cornerRadius = radius,
-            )
-        }
-    }
-}
 
 /** One icon + label + value cell used inside the session strip. */
 @Composable

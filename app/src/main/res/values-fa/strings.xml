@@ -16,9 +16,6 @@
     <string name="value_not_set">تنظیم نشده</string>
 
     <!-- وضعیت اتصال -->
-    <string name="status_protected">محافظت‌شده</string>
-    <string name="status_connecting">در حال برقراری تونل</string>
-    <string name="status_disconnected">وصل نیست</string>
     <string name="state_connected">متصل</string>
     <string name="state_connecting">در حال اتصال…</string>
     <string name="state_disconnected">قطع</string>
@@ -48,7 +45,7 @@
     <string name="session_reconnects">اتصال مجدد</string>
 
     <!-- سهمیه -->
-    <string name="quota_section">سهمیه‌ی ماهانه</string>
+    <string name="quota_section">حجم باقیمانده</string>
     <string name="quota_remaining">%1$s باقی‌مانده</string>
     <string name="quota_used_of">%1$s از %2$s مصرف شده</string>
     <string name="quota_unlimited">ترافیک نامحدود</string>
@@ -60,6 +57,7 @@
 
     <!-- کارت مکان در خانه -->
     <string name="home_servers">سرورها</string>
+    <string name="home_server_host">سرور  •  %1$s</string>
     <string name="home_servers_default">پیشنهادی</string>
     <string name="home_servers_default_subtitle">سریع‌ترین سرور در دسترس</string>
 

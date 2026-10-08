@@ -16,9 +16,6 @@
     <string name="value_not_set">Not set</string>
 
     <!-- Connection status -->
-    <string name="status_protected">Protected</string>
-    <string name="status_connecting">Establishing tunnel</string>
-    <string name="status_disconnected">Not connected</string>
     <string name="state_connected">Connected</string>
     <string name="state_connecting">Connecting…</string>
     <string name="state_disconnected">Disconnected</string>
@@ -48,7 +45,7 @@
     <string name="session_reconnects">Reconnects</string>
 
     <!-- Quota -->
-    <string name="quota_section">Monthly allowance</string>
+    <string name="quota_section">Remaining data</string>
     <string name="quota_remaining">%1$s left</string>
     <string name="quota_used_of">%1$s of %2$s used</string>
     <string name="quota_unlimited">Unlimited data</string>
@@ -60,6 +57,7 @@
 
     <!-- Home location card -->
     <string name="home_servers">Servers</string>
+    <string name="home_server_host">Server  •  %1$s</string>
     <string name="home_servers_default">Recommended</string>
     <string name="home_servers_default_subtitle">Fastest available server</string>
 

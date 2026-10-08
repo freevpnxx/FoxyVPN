@@ -77,6 +77,9 @@ data class SessionStats(
     val upBytesTotal: Long = 0L,
     val quotaMax: Long? = null,
     val quotaRemaining: Long? = null,
+    /** Byte counters at the instant [quotaRemaining] was read, so usage can be subtracted live. */
+    val quotaAnchorDownBytes: Long = 0L,
+    val quotaAnchorUpBytes: Long = 0L,
     val quotaResetEpochSeconds: Long? = null,
     val quotaUnlimited: Boolean = false,
     val exitIp: String? = null,
@@ -84,6 +87,18 @@ data class SessionStats(
     val reconnects: Int = 0,
 ) {
     val isActive: Boolean get() = startedAtElapsedMs != null
+
+    /**
+     * The proxy pass reports the allowance once, when it is minted, so the raw header goes stale
+     * the moment traffic starts flowing. Subtracting the bytes counted since that instant keeps
+     * the figure accurate for the whole session instead of frozen at its connect-time value.
+     */
+    val liveQuotaRemaining: Long?
+        get() {
+            val baseline = quotaRemaining ?: return null
+            val used = (downBytesTotal - quotaAnchorDownBytes) + (upBytesTotal - quotaAnchorUpBytes)
+            return (baseline - used).coerceAtLeast(0L)
+        }
 
     fun elapsedMs(nowElapsedMs: Long): Long =
         startedAtElapsedMs?.let { (nowElapsedMs - it).coerceAtLeast(0L) } ?: 0L
@@ -717,6 +732,8 @@ class FoxyVpnService : VpnService() {
                         quotaMax = pass.quotaMax ?: current.quotaMax,
                         quotaRemaining = pass.quotaRemaining ?: current.quotaRemaining,
                         quotaResetEpochSeconds = pass.quotaReset ?: current.quotaResetEpochSeconds,
+                        quotaAnchorDownBytes = current.downBytesTotal,
+                        quotaAnchorUpBytes = current.upBytesTotal,
                     )
                 }
                 if (pass.quotaMax == null && pass.quotaRemaining == null) {
