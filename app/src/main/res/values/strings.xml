@@ -141,7 +141,7 @@
     <string name="lang_en">English</string>
     <string name="lang_fa">فارسی</string>
     <string name="settings_section_appearance">Appearance</string>
-    <string name="err_vpn_permission">FoxyVPN needs Android's VPN permission to tunnel this device's traffic. Proxy-only mode in Settings works without it.</string>
+    <string name="err_vpn_permission">FoxyVPN needs Android\'s VPN permission to tunnel this device\'s traffic. Proxy-only mode in Settings works without it.</string>
     <string name="settings_section_reliability">Reliability</string>
     <string name="settings_section_about">About</string>
     <string name="settings_section_account">Account</string>
